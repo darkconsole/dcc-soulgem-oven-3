@@ -17,15 +17,32 @@ Scriptname dcc_sgo_QuestController extends Quest
          |::.|                   |::.|                                      
          `---'                   `---'                                      
 *****************************************************************************/;
-;; ASCII Text http://patorjk.com/software/taag/#p=display&f=Cricket
 
 ;; >
 ;; THERE ARE ONLY 6 SOULGEM
 ;; MODELS.
 
-;; StorageUtil Keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; StorageUtil Keys (Global) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FormList SGO.ActorList.Gems - list all actors currently growing gems.
 ;; FormList SGO.ActorList.Milk - list all actors currently producing milk.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Float    SGO.Actor.Time.Gem - the last time this actor's gem data updated.
+;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Method List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; these are the methods which have been designed to be used by mods that wish
+;; to integrate with soulgem oven.
+
+;; SGO.ActorGetTimeSinceUpdate(Actor, String)
+;; SGO.ActorSetTimeUpdated(Actor, String[, Float])
+;; SGO.ActorTrackForMilk(Actor, Bool)
+;; SGO.ActorTrackForGems(Actor, Bool)
+;; SGO.ActorUpdateMilkData(Actor, Bool)
+;; SGO.ActorUpdateGemData(Actor, Bool)
 
 ;/*****************************************************************************
                                     __   __             
@@ -36,12 +53,31 @@ Scriptname dcc_sgo_QuestController extends Quest
 
 *****************************************************************************/;
 
-;; scripts n stuff.
-dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
-
-;; mod options (most changable via mcm)
 Bool  Property OK = FALSE Auto Hidden
+
+;; scripts n stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
+{the script that will handle the update queue.}
+
+;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Float Property OptGemMatureTime = 144.0 Auto Hidden
+{how many hours for a gem to mature. default 144 = 6 days.}
+
+Float Property OptMilkProduceTime = 8.0 Auto Hidden
+{how many hours for milk to produce. default 8 = 3 per day.}
+
+;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Bool  Property OptDebug = TRUE Auto Hidden
+{print debugging information out to the console}
+
 Float Property OptUpdateInterval = 5.0 Auto Hidden
+{how long to wait before beginning the calculation queue again.}
+
+Float Property OptUpdateDelay = 0.125 Auto Hidden
+{how long to delay the update loop each iteration.}
 
 ;/*****************************************************************************
                      __                      __              __ 
@@ -75,6 +111,10 @@ Function ResetMod_Prepare()
 	EndIf
 
 	If(!self.IsInstalledUIExtensions())
+		Return
+	EndIf
+
+	If(!self.IsSexLabInstalled())
 		Return
 	EndIf
 
@@ -113,22 +153,39 @@ EndFunction
                                                              
 *****************************************************************************/;
 
-Bool Function IsInstalledNiOverride()
-{make sure nioverride is installed and active.}
+Bool Function IsInstalledNiOverride(Bool Popup=TRUE)
+{make sure NiOverride is installed and active.}
 
 	If(SKSE.GetPluginVersion("nioverride.dll") == -1)
-		Debug.MessageBox("NiOverride is not installed. Install it by installing RaceMenu or by installing it standalone from the Nexus.")
+		If(Popup)
+			Debug.MessageBox("NiOverride not installed. Install it by installing RaceMenu or by installing it standalone from the Nexus.")
+		EndIf
 		Return FALSE
 	EndIf
 
 	Return TRUE
 EndFunction
 
-Bool Function IsInstalledUIExtensions()
+Bool Function IsInstalledUIExtensions(Bool Popup=TRUE)
 {make sure UIExtensions is installed and active.}
 
 	If(Game.GetModByName("UIExtensions.esp") == 255)
-		Debug.MessageBox("UIExtensions is not installed. Install it from the Nexus.")
+		If(Popup)
+			Debug.MessageBox("UIExtensions not installed. Install it from the Nexus.")
+		EndIf
+		Return FALSE
+	EndIf
+
+	Return TRUE
+EndFunction
+
+Bool Function IsSexLabInstalled(Bool Popup=TRUE)
+{make sure SexLab is installed and active.}
+
+	If(Game.GetModByName("SexLab.esm") == 255)
+		If(Popup)
+			Debug.MessageBox("SexLab not installed. Install it from LoversLab.")
+		EndIf
 		Return FALSE
 	EndIf
 
@@ -144,26 +201,108 @@ EndFunction
 
 *****************************************************************************/;
 
-Function TrackActorForGems(Actor Who, Bool Enabled)
+Function ActorTrackForGems(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors who are growing gems}
 
 	If(Enabled)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Gems",Who,False)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Gems",Who,True)
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Gem")
 	EndIf
 
 	Return
 EndFunction
 
-Function TrackActorForMilk(Actor Who, Bool Enabled)
+Function ActorTrackForMilk(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating milk.}
 
 	If(Enabled)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,False)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,True)
-	EndIf		
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Milk")
+	EndIf
 
+	Return
+EndFunction
+
+;/*****************************************************************************
+             __                     __       __         
+ .---.-.----|  |_.-----.----.   .--|  .---.-|  |_.---.-.
+ |  _  |  __|   _|  _  |   _|   |  _  |  _  |   _|  _  |
+ |___._|____|____|_____|__|     |_____|___._|____|___._|
+                                                        
+*****************************************************************************/;
+
+Float Function ActorGetTimeSinceUpdate(Actor Who, String What)
+{return how many game hours have passed since this actors specified data has
+been updated. the string value is the storageutil name for the data you want.}
+
+	Float Current = Utility.GetCurrentGameTime()
+	Float Last = StorageUtil.GetFloatValue(Who,What,Current)
+
+	Return (Current - Last) * 24.0
+EndFunction
+
+Function ActorSetTimeUpdated(Actor Who, String What, Float When=0.0)
+{set the current time to mark this actor having been updated. the string value
+is the storageutil name for the data you want.}
+
+	If(When == 0.0)
+		When = Utility.GetCurrentGameTime()
+	EndIf
+
+	StorageUtil.SetFloatValue(Who,What,When)
+	Return
+EndFunction
+
+;/*****************************************************************************
+                                       __ 
+ .-----.-----.--------.   .---.-.-----|__|
+ |  _  |  -__|        |   |  _  |  _  |  |
+ |___  |_____|__|__|__|   |___._|   __|__|
+ |_____|                        |__|      
+                                          
+*****************************************************************************/;
+
+Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
+{cause this actor to have its gem data recalculated.}
+
+	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
+
+	If(Time < 1.0 && !Force)
+		;; no need to recalculate this actor more than once a game hour.
+		Return
+	EndIf
+
+	;; ...
+
+	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
+	Return
+EndFunction
+
+;/*****************************************************************************
+           __ __ __                    __ 
+ .--------|__|  |  |--.   .---.-.-----|__|
+ |        |  |  |    <    |  _  |  _  |  |
+ |__|__|__|__|__|__|__|   |___._|   __|__|
+                                |__|      
+
+*****************************************************************************/;
+
+Function ActorUpdateMilkData(Actor Who, Bool Force=FALSE)
+{cause this actor to have its milk data recalculated.}
+
+	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Milk")
+
+	If(Time < 1.0 && !Force)
+		;; no need to recalculate this actor more than once a game hour.
+		Return
+	EndIf
+
+	;; ...
+
+	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Milk")
 	Return
 EndFunction
