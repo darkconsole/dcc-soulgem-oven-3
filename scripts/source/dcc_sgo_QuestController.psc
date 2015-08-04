@@ -31,6 +31,8 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Float    SGO.Actor.Time.Gem - the last time this actor's gem data updated.
 ;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
+;; Float[]  SGO.Actor.Gems - the gem data for this actor.
+;; Float    SGO.Actor.Milk - the milk data for this actor.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Method List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -270,13 +272,29 @@ Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its gem data recalculated.}
 
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
-
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
 		Return
 	EndIf
 
-	;; ...
+	;;;;;;;;
+
+	Int Count = Storageutil.FloatListCount(Who,"SGO.Actor.Data.Gems")
+	Float Gem
+
+	Int x = 0
+	While(x < Count)
+		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gems",x)
+		Gem += (Time / self.OptGemMatureTime)
+
+		;; if the gem value is over over 6, maybe 7+, considering including
+		;; a chance to force you into labour.
+
+		StorageUtil.FloatListSet(Who,"SGO.Actor.Data.Gems",x,Gem)
+		x += 1
+	EndWhile
+
+	;;;;;;;;
 
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
 	Return
