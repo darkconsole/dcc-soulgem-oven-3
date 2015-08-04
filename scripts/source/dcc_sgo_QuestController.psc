@@ -186,7 +186,7 @@ EndFunction
 Bool Function IsInstalledNiOverride(Bool Popup=TRUE)
 {make sure NiOverride is installed and active.}
 
-	If(SKSE.GetPluginVersion("nioverride.dll") == -1)
+	If(SKSE.GetPluginVersion("NiOverride") == -1)
 		If(Popup)
 			Debug.MessageBox("NiOverride not installed. Install it by installing RaceMenu or by installing it standalone from the Nexus.")
 		EndIf
