@@ -24,15 +24,15 @@ Scriptname dcc_sgo_QuestController extends Quest
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; StorageUtil Keys (Global) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; FormList SGO.ActorList.Gems - list all actors currently growing gems.
+;; FormList SGO.ActorList.Gem - list all actors currently growing gems.
 ;; FormList SGO.ActorList.Milk - list all actors currently producing milk.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Float    SGO.Actor.Time.Gem - the last time this actor's gem data updated.
 ;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
-;; Float[]  SGO.Actor.Gems - the gem data for this actor.
-;; Float    SGO.Actor.Milk - the milk data for this actor.
+;; Float[]  SGO.Actor.Data.Gem - the gem data for this actor.
+;; Float    SGO.Actor.Data.Milk - the milk data for this actor.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Method List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -79,11 +79,16 @@ Scriptname dcc_sgo_QuestController extends Quest
 *****************************************************************************/;
 
 Bool  Property OK = FALSE Auto Hidden
+{this will be set to true if everything this mod needs to run has been found
+and accessible during startup or reset.}
 
 ;; scripts n stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+Actor Property Player Auto
+{maintain a pointer to player. set via ck.}
+
 dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
-{the script that will handle the update queue.}
+{the script that will handle the update queue. set via ck.}
 
 SexLabFramework Property SexLab Auto Hidden
 {the sexlab framework scripting. it will be set by the dependency checker.}
@@ -101,6 +106,12 @@ Float Property OptMilkProduceTime = 8.0 Auto Hidden
 
 Int Property OptMilkMaxCapacity = 3 Auto Hidden
 {how many bottles of milk can be carried at one time.}
+
+Float Property OptScaleBellyMax = 3.0 Auto Hidden
+{the maximum size of the belly when full up.}
+
+Float Property OptScaleBreastMax = 2.0 Auto Hidden
+{the maximum size of the breasts when filled up.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -284,41 +295,6 @@ Function EventSendMilkProgress(Actor Who, Int Progress)
 EndFunction
 
 ;/*****************************************************************************
-  __                   __    __                             __ 
- |  |_.----.---.-.----|  |--|__.-----.-----.   .---.-.-----|__|
- |   _|   _|  _  |  __|    <|  |     |  _  |   |  _  |  _  |  |
- |____|__| |___._|____|__|__|__|__|__|___  |   |___._|   __|__|
-                                     |_____|         |__|      
-
-*****************************************************************************/;
-
-Function ActorTrackForGems(Actor Who, Bool Enabled)
-{place or remove an actor from the list tracking actors who are growing gems}
-
-	If(Enabled)
-		StorageUtil.FormListAdd(None,"SGO.ActorList.Gems",Who,False)
-	Else
-		StorageUtil.FormListRemove(None,"SGO.ActorList.Gems",Who,True)
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Gem")
-	EndIf
-
-	Return
-EndFunction
-
-Function ActorTrackForMilk(Actor Who, Bool Enabled)
-{place or remove an actor from the list tracking actors generating milk.}
-
-	If(Enabled)
-		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,False)
-	Else
-		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,True)
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Milk")
-	EndIf
-
-	Return
-EndFunction
-
-;/*****************************************************************************
              __                     __       __         
  .---.-.----|  |_.-----.----.   .--|  .---.-|  |_.---.-.
  |  _  |  __|   _|  _  |   _|   |  _  |  _  |   _|  _  |
@@ -349,6 +325,43 @@ is the storageutil name for the data you want.}
 EndFunction
 
 ;/*****************************************************************************
+  __                   __    __                             __ 
+ |  |_.----.---.-.----|  |--|__.-----.-----.   .---.-.-----|__|
+ |   _|   _|  _  |  __|    <|  |     |  _  |   |  _  |  _  |  |
+ |____|__| |___._|____|__|__|__|__|__|___  |   |___._|   __|__|
+                                     |_____|         |__|      
+
+*****************************************************************************/;
+
+Function ActorTrackForGems(Actor Who, Bool Enabled)
+{place or remove an actor from the list tracking actors who are growing gems}
+
+	If(Enabled)
+		StorageUtil.FormListAdd(None,"SGO.ActorList.Gem",Who,False)
+	Else
+		StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",Who,True)
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Gem")
+		StorageUtil.FloatListClear(Who,"SGO.Actor.Data.Gem")
+	EndIf
+
+	Return
+EndFunction
+
+Function ActorTrackForMilk(Actor Who, Bool Enabled)
+{place or remove an actor from the list tracking actors generating milk.}
+
+	If(Enabled)
+		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,False)
+	Else
+		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,True)
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Milk")
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Milk")
+	EndIf
+
+	Return
+EndFunction
+
+;/*****************************************************************************
   __             __                       __ 
  |  |--.-----.--|  .--.--.   .---.-.-----|__|
  |  _  |  _  |  _  |  |  |   |  _  |  _  |  |
@@ -361,23 +374,67 @@ Function ActorUpdateBody(Actor Who)
 {push the updated visual data into NiOverride. cheers to Groovtama for helping
 witht he NiO stuffs.}
 
+	self.ActorUpdateBody_BellyScale(Who)
+	self.ActorUpdateBody_BreastScale(Who)
+	Return
+EndFunction
+
+Function ActorUpdateBody_BellyScale(Actor Who)
+{handle the physical representation of the belly.}
+
 	Float Belly = 1.0
-	Float Breast = 1.0
 	Bool Female = (Who.GetActorBase().GetSex() == 1)
 
-	;;;;;;;;
-	;;;;;;;;
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
 
-	;; calcs i haven't written yet.
+	Int x = 0
+	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+	Float Weight = 0.0
 
-	;;;;;;;;
-	;;;;;;;;
+	While(x < Count)
+		Weight += StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
+		x += 1
+	EndWhile
+
+	;; with a max of six gems, max of 300% more visual
+	;; depending on how the visual results look we may want to curve this value.
+	;; to scale less at higher volumes.
+	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
+	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
+
+	Belly = ((Weight / (6 * self.OptGemMaxCapacity)) * self.OptScaleBellyMax) + 1
+
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
 
 	If(Belly == 1.0)
 		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale")
 	Else
 		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale",Belly)
 	EndIf
+
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC Belly")
+	Return
+EndFunction
+
+Function ActorUpdateBody_BreastScale(Actor Who)
+{handle the physical representation of the breasts.}
+	
+	Float Breast = 1.0
+	Bool Female = (Who.GetActorBase().GetSex() == 1)
+
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
+
+	;; with a max of 3 bottles, max of 200% more visual
+	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
+	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
+
+	Breast = ((StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk") / self.OptMilkMaxCapacity) * self.OptScaleBreastMax) + 1
+
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
 
 	If(Breast == 1.0)
 		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC L Breast","SGO.Scale")
@@ -387,7 +444,6 @@ witht he NiO stuffs.}
 		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC R Breast","SGO.Scale",Breast)
 	EndIf
 
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC Belly")
 	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC L Breast")
 	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC R Breast")
 	Return
@@ -405,7 +461,8 @@ EndFunction
 Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its gem data recalculated. it will generate an array
 that is a snapshot of the current gem states, and that snapshot will be emitted
-in a mod event if a gem reached the next stage.}
+in a mod event if a gem reached the next stage. this is probably the heaviest
+function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
 	If(Time < 1.0 && !Force)
@@ -418,17 +475,22 @@ in a mod event if a gem reached the next stage.}
 
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
-	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gems")
+	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+
 	Float Gem
 	Float Before
-
 	Int x = 0
 	While(x < Count)
-		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gems",x)
+		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
 		Before = Gem
 
 		Gem += (Time / self.OptGemMatureTime)
-		Progress[Gem as Int] = Progress[Gem as Int] + 1
+
+		If(Gem <= 6)
+			Progress[Gem as Int] = Progress[Gem as Int] + 1
+		Else
+			Progress[6] = Progress[6] + 1
+		EndIf
 
 		If(Before as Int != Gem as Int)
 			;; if the gem reached the next stage then mark it down
@@ -436,7 +498,7 @@ in a mod event if a gem reached the next stage.}
 			Progressed = TRUE
 		EndIf
 		
-		StorageUtil.FloatListSet(Who,"SGO.Actor.Data.Gems",x,Gem)
+		StorageUtil.FloatListSet(Who,"SGO.Actor.Data.Gem",x,Gem)
 		x += 1
 	EndWhile
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
