@@ -17,13 +17,15 @@ Scriptname dcc_sgo_QuestController extends Quest
          |::.|                   |::.|                                      
          `---'                   `---'                                      
 *****************************************************************************/;
+;; ASCII Text http://patorjk.com/software/taag/#p=display&f=Cricket
+
+;; >
+;; THERE ARE ONLY 6 SOULGEM
+;; MODELS.
 
 ;; StorageUtil Keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FormList SGO.ActorList.Gems - list all actors currently growing gems.
 ;; FormList SGO.ActorList.Milk - list all actors currently producing milk.
-
-;; Gem Information ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; There are six types of soulgems.
 
 ;/*****************************************************************************
                                     __   __             
@@ -38,6 +40,7 @@ Scriptname dcc_sgo_QuestController extends Quest
 dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
 
 ;; mod options (most changable via mcm)
+Bool  Property OK = FALSE Auto Hidden
 Float Property OptUpdateInterval = 5.0 Auto Hidden
 
 ;/*****************************************************************************
@@ -49,26 +52,87 @@ Float Property OptUpdateInterval = 5.0 Auto Hidden
 *****************************************************************************/;
 
 Event OnInit()
+	self.OK = FALSE
+	self.ResetMod_Prepare()
 	self.ResetMod_Values()
 	self.ResetMod_Events()
 EndEvent
 
 Function ResetMod()
+{perform a quest (and ergo mod) reboot.}
+
 	self.Reset()
 	self.Stop()
 	self.Start()
 	Return
 EndFunction
 
+Function ResetMod_Prepare()
+{check that everything this mod needs to run exists and is ready.}
+
+	If(!self.IsInstalledNiOverride())
+		Return
+	EndIf
+
+	If(!self.IsInstalledUIExtensions())
+		Return
+	EndIf
+
+	self.OK = TRUE
+	Return
+EndFunction
+
 Function ResetMod_Values()
+{force reset settings to default values.}
+
 	self.OptUpdateInterval = 5.0
 	Return
 EndFunction
 
 Function ResetMod_Events()
+{cleanup and reinit of any event handling things.}
+
 	UpdateLoop.UnregisterForUpdate()
+
+	If(!self.OK)
+		;; we allowed this method to do a cleanup, but if the mod is not
+		;; satisified we will not re-engage events.
+		Return
+	EndIf
+
 	UpdateLoop.RegisterForSingleUpdate(self.OptUpdateInterval)
 	Return
+EndFunction
+
+;/*****************************************************************************
+     __                            __                        
+ .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
+ |  _  |  -__|  _  |  -__|     |  _  |  -__|     |  __|  |  |
+ |_____|_____|   __|_____|__|__|_____|_____|__|__|____|___  |
+             |__|                                     |_____|
+                                                             
+*****************************************************************************/;
+
+Bool Function IsInstalledNiOverride()
+{make sure nioverride is installed and active.}
+
+	If(SKSE.GetPluginVersion("nioverride.dll") == -1)
+		Debug.MessageBox("NiOverride is not installed. Install it by installing RaceMenu or by installing it standalone from the Nexus.")
+		Return FALSE
+	EndIf
+
+	Return TRUE
+EndFunction
+
+Bool Function IsInstalledUIExtensions()
+{make sure UIExtensions is installed and active.}
+
+	If(Game.GetModByName("UIExtensions.esp") == 255)
+		Debug.MessageBox("UIExtensions is not installed. Install it from the Nexus.")
+		Return FALSE
+	EndIf
+
+	Return TRUE
 EndFunction
 
 ;/*****************************************************************************
