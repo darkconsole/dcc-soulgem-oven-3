@@ -46,6 +46,29 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; SGO.ActorUpdateMilkData(Actor, Bool)
 ;; SGO.ActorUpdateGemData(Actor, Bool)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Event List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; events emitted by this mod that can be watched for by mods that wish to
+;; integrate with soulgem oven.
+
+;; SGO.OnGemProgress ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Int No, Int Pet, Int Les, Int Com, Int Gre, Int Gra, Int Bla
+;; This event describes the number of gems the specified actor is carrying in
+;; the various states of development. It is emitted any time a gem crosses
+;; into the next stage.
+
+;; SGO.OnMilkProgress ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Int Amount
+;; This event describes how many bottles of milk the specified actor is
+;; carrying. It is emitted any time another whole bottle is ready.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; NiOverride Keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; SGO.Scale on NPC Belly
+;; SGO.Scale on NPC L Breast
+;; SGO.Scale on NPC R Breast
+
 ;/*****************************************************************************
                                     __   __             
  .-----.----.-----.-----.-----.----|  |_|__.-----.-----.
@@ -62,13 +85,22 @@ Bool  Property OK = FALSE Auto Hidden
 dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
 {the script that will handle the update queue.}
 
+SexLabFramework Property SexLab Auto Hidden
+{the sexlab framework scripting. it will be set by the dependency checker.}
+
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptGemMatureTime = 144.0 Auto Hidden
 {how many hours for a gem to mature. default 144 = 6 days.}
 
+Int Property OptGemMaxCapacity = 6 Auto Hidden
+{how many gems can be carried at one time.}
+
 Float Property OptMilkProduceTime = 8.0 Auto Hidden
 {how many hours for milk to produce. default 8 = 3 per day.}
+
+Int Property OptMilkMaxCapacity = 3 Auto Hidden
+{how many bottles of milk can be carried at one time.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -89,15 +121,9 @@ Float Property OptUpdateDelay = 0.125 Auto Hidden
 
 *****************************************************************************/;
 
-Event OnInit()
-	self.OK = FALSE
-	self.ResetMod_Prepare()
-	self.ResetMod_Values()
-	self.ResetMod_Events()
-EndEvent
-
 Function ResetMod()
-{perform a quest (and ergo mod) reboot.}
+{perform a quest (and ergo mod) reboot. quest RunOnce is disabled so that we
+trigger OnInit() to finish the deal.}
 
 	self.Reset()
 	self.Stop()
@@ -134,6 +160,7 @@ EndFunction
 Function ResetMod_Events()
 {cleanup and reinit of any event handling things.}
 
+	UnregisterForModEvent("OrgasmStart")
 	UpdateLoop.UnregisterForUpdate()
 
 	If(!self.OK)
@@ -142,6 +169,7 @@ Function ResetMod_Events()
 		Return
 	EndIf
 
+	RegisterForModEvent("OrgasmStart","OnEncounterEnding")
 	UpdateLoop.RegisterForSingleUpdate(self.OptUpdateInterval)
 	Return
 EndFunction
@@ -191,7 +219,68 @@ Bool Function IsSexLabInstalled(Bool Popup=TRUE)
 		Return FALSE
 	EndIf
 
+	self.SexLab = Game.GetFormFromFile(0xD62,"SexLab.esm") as SexLabFramework
 	Return TRUE
+EndFunction
+
+;/*****************************************************************************
+                          __         
+ .-----.--.--.-----.-----|  |_.-----.
+ |  -__|  |  |  -__|     |   _|__ --|
+ |_____|\___/|_____|__|__|____|_____|
+                                                             
+*****************************************************************************/;
+
+Event OnInit()
+	self.OK = FALSE
+	self.ResetMod_Prepare()
+	self.ResetMod_Values()
+	self.ResetMod_Events()
+EndEvent
+
+Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
+	Actor[] actors = SexLab.HookActors(Args)
+	sslBaseAnimation ani = SexLab.HookAnimation(Args)
+
+	;; ...
+
+	Return
+EndEvent
+
+Function EventSendGemProgress(Actor Who, Int[] Progress)
+{emit an event listing the current state of the gems being carried.}
+
+	Int e = ModEvent.Create("SGO.OnGemProgress")
+
+	;; fml, you cannot push an array into mod events.
+
+	If(e)
+		ModEvent.PushForm(e,Who)
+		ModEvent.PushInt(e,Progress[0]) ;; unready gems
+		ModEvent.PushInt(e,Progress[1]) ;; petty gems
+		ModEvent.PushInt(e,Progress[2]) ;; lesser gems
+		ModEvent.PushInt(e,Progress[3]) ;; common gems
+		ModEvent.PushInt(e,Progress[4]) ;; greater gems
+		ModEvent.PushInt(e,Progress[5]) ;; grand gems
+		ModEvent.PushInt(e,Progress[6]) ;; black gems
+		ModEvent.Send(e)
+	EndIf
+
+	Return
+EndFunction
+
+Function EventSendMilkProgress(Actor Who, Int Progress)
+{emit an event stating the current amount of milk being carried.}
+
+	Int e = ModEvent.Create("SGO.OnMilkProgress")
+
+	If(e)
+		ModEvent.PushForm(e,Who)
+		ModEvent.PushInt(e,Progress)
+		ModEvent.Send(e)
+	EndIf
+
+	Return
 EndFunction
 
 ;/*****************************************************************************
@@ -260,6 +349,51 @@ is the storageutil name for the data you want.}
 EndFunction
 
 ;/*****************************************************************************
+  __             __                       __ 
+ |  |--.-----.--|  .--.--.   .---.-.-----|__|
+ |  _  |  _  |  _  |  |  |   |  _  |  _  |  |
+ |_____|_____|_____|___  |   |___._|   __|__|
+                   |_____|         |__|      
+
+*****************************************************************************/;
+
+Function ActorUpdateBody(Actor Who)
+{push the updated visual data into NiOverride. cheers to Groovtama for helping
+witht he NiO stuffs.}
+
+	Float Belly = 1.0
+	Float Breast = 1.0
+	Bool Female = (Who.GetActorBase().GetSex() == 1)
+
+	;;;;;;;;
+	;;;;;;;;
+
+	;; calcs i haven't written yet.
+
+	;;;;;;;;
+	;;;;;;;;
+
+	If(Belly == 1.0)
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale")
+	Else
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale",Belly)
+	EndIf
+
+	If(Breast == 1.0)
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC L Breast","SGO.Scale")
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC R Breast","SGO.Scale")
+	Else
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC L Breast","SGO.Scale",Breast)
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC R Breast","SGO.Scale",Breast)
+	EndIf
+
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC Belly")
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC L Breast")
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC R Breast")
+	Return
+EndFunction
+
+;/*****************************************************************************
                                        __ 
  .-----.-----.--------.   .---.-.-----|__|
  |  _  |  -__|        |   |  _  |  _  |  |
@@ -269,7 +403,9 @@ EndFunction
 *****************************************************************************/;
 
 Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
-{cause this actor to have its gem data recalculated.}
+{cause this actor to have its gem data recalculated. it will generate an array
+that is a snapshot of the current gem states, and that snapshot will be emitted
+in a mod event if a gem reached the next stage.}
 
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
 	If(Time < 1.0 && !Force)
@@ -278,25 +414,40 @@ Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
 	EndIf
 
 	;;;;;;;;
+	;;;;;;;;
 
-	Int Count = Storageutil.FloatListCount(Who,"SGO.Actor.Data.Gems")
+	Int[] Progress = new Int[7]
+	Bool Progressed = FALSE
+	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gems")
 	Float Gem
+	Float Before
 
 	Int x = 0
 	While(x < Count)
 		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gems",x)
+		Before = Gem
+
 		Gem += (Time / self.OptGemMatureTime)
+		Progress[Gem as Int] = Progress[Gem as Int] + 1
 
-		;; if the gem value is over over 6, maybe 7+, considering including
-		;; a chance to force you into labour.
-
+		If(Before as Int != Gem as Int)
+			;; if the gem reached the next stage then mark it down
+			;; so we can emit an event listing the progression.
+			Progressed = TRUE
+		EndIf
+		
 		StorageUtil.FloatListSet(Who,"SGO.Actor.Data.Gems",x,Gem)
 		x += 1
 	EndWhile
+	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
 
 	;;;;;;;;
+	;;;;;;;;
 
-	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
+	If(Progressed)
+		self.EventSendGemProgress(Who,Progress)
+	EndIf
+	
 	Return
 EndFunction
 
@@ -310,7 +461,8 @@ EndFunction
 *****************************************************************************/;
 
 Function ActorUpdateMilkData(Actor Who, Bool Force=FALSE)
-{cause this actor to have its milk data recalculated.}
+{cause this actor to have its milk data recalculated. if we have gained another
+full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Milk")
 
@@ -319,8 +471,26 @@ Function ActorUpdateMilkData(Actor Who, Bool Force=FALSE)
 		Return
 	EndIf
 
-	;; ...
+	;;;;;;;;
+	;;;;;;;;
 
+	Float Milk = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk",0.0)
+	Float Before = Milk
+
+	Milk += (Time / self.OptMilkProduceTime)
+	If(Milk > self.OptMilkMaxCapacity)
+		Milk = self.OptMilkMaxCapacity
+	EndIf
+
+	StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Milk",Milk)
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Milk")
+
+	;;;;;;;;
+	;;;;;;;;
+
+	If(Before as Int != Milk as Int)
+		self.EventSendMilkProgress(Who,(Milk as Int))
+	EndIf
+
 	Return
 EndFunction
