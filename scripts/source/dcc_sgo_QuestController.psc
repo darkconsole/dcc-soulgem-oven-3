@@ -115,39 +115,39 @@ Perk Property dcc_sgo_PerkCanInseminate Auto
 
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptGemMatureTime = 144.0 Auto Hidden
+Float Property OptGemMatureTime Auto Hidden
 {how many hours for a gem to mature. default 144 = 6 days.}
 
-Int Property OptGemMaxCapacity = 6 Auto Hidden
+Int Property OptGemMaxCapacity Auto Hidden
 {how many gems can be carried at one time.}
 
-Float Property OptMilkProduceTime = 8.0 Auto Hidden
+Float Property OptMilkProduceTime Auto Hidden
 {how many hours for milk to produce. default 8 = 3 per day.}
 
-Int Property OptMilkMaxCapacity = 3 Auto Hidden
+Int Property OptMilkMaxCapacity Auto Hidden
 {how many bottles of milk can be carried at one time.}
 
-Float Property OptScaleBellyMax = 3.0 Auto Hidden
+Float Property OptScaleBellyMax Auto Hidden
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastMax = 2.0 Auto Hidden
+Float Property OptScaleBreastMax Auto Hidden
 {the maximum size of the breasts when filled up.}
 
-Int Property OptPregChanceHumanoid = 75 Auto Hidden
+Int Property OptPregChanceHumanoid Auto Hidden
 {preg chance on encounters with people.}
 
-Int Property OptPregChanceBeast = 10 Auto Hidden
+Int Property OptPregChanceBeast Auto Hidden
 {preg chance on encounters with beasts.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool  Property OptDebug = TRUE Auto Hidden
+Bool  Property OptDebug Auto Hidden
 {print debugging information out to the console}
 
-Float Property OptUpdateInterval = 5.0 Auto Hidden
+Float Property OptUpdateInterval Auto Hidden
 {how long to wait before beginning the calculation queue again.}
 
-Float Property OptUpdateDelay = 0.125 Auto Hidden
+Float Property OptUpdateDelay Auto Hidden
 {how long to delay the update loop each iteration.}
 
 ;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -202,10 +202,12 @@ Function ResetMod_Values()
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
 	self.OptScaleBellyMax = 3.0
-	self.OptScaleBreastMax = 2.0
+	self.OptScaleBreastMax = 0.75
+	self.OptPregChanceHumanoid = 75
+	self.OptPregChanceBeast = 10
 
 	self.OptDebug = TRUE
-	self.OptUpdateInterval = 5.0
+	self.OptUpdateInterval = 10.0
 	self.OptUpdateDelay = 0.125
 	Return
 EndFunction
@@ -213,8 +215,8 @@ EndFunction
 Function ResetMod_Events()
 {cleanup and reinit of any event handling things.}
 
-	UnregisterForModEvent("OrgasmStart")
-	UpdateLoop.UnregisterForUpdate()
+	self.UnregisterForModEvent("OrgasmStart")
+	self.UpdateLoop.UnregisterForUpdate()
 
 	If(!self.OK)
 		;; we allowed this method to do a cleanup, but if the mod is not
@@ -222,13 +224,22 @@ Function ResetMod_Events()
 		Return
 	EndIf
 
-	RegisterForModEvent("OrgasmStart","OnEncounterEnding")
-	UpdateLoop.RegisterForSingleUpdate(self.OptUpdateInterval)
+	self.RegisterForModEvent("OrgasmStart","OnEncounterEnding")
+	self.UpdateLoop.RegisterForSingleUpdate(self.OptUpdateInterval)
 	Return
 EndFunction
 
 Function Print(String Msg)
 	Debug.Notification("[SGO] " + Msg)
+	Return
+EndFunction
+
+Function PrintDebug(String Msg)
+	If(!self.OptDebug)
+		Return
+	EndIf
+
+	self.Print(Msg)
 	Return
 EndFunction
 
@@ -294,10 +305,21 @@ Event OnInit()
 	self.ResetMod_Prepare()
 	self.ResetMod_Values()
 	self.ResetMod_Events()
+
+	self.Print("Mod Installed.")
+	If(self.OK)
+		self.Print("Mod Active.")
+	Else
+		self.Print("Mod Inactive - Go fix missing dependencies.")
+	EndIf
+	
+	Return
 EndEvent
 
 Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	
+	self.PrintDebug("OnEncounterEnding Fired")
+
 	Actor[] ActorList = SexLab.HookActors(Args)
 	Int[] ActorBio = PapyrusUtil.IntArray(ActorList.Length)
 	sslBaseAnimation Animation = SexLab.HookAnimation(Args)
@@ -313,6 +335,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	;; check if the animation type even included penetration.
 
 	If(!Animation.IsVaginal && !Animation.IsAnal)
+		self.PrintDebug("Encounter did not have penetration (vag/anal).")
 		Return
 	EndIf
 
@@ -331,13 +354,13 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	x = 0
 	While(x < ActorList.Length)
 		ActorBio[x] = self.ActorGetBiologicalFunctions(ActorList[x])
-		PartyBio = Math.LogicalAnd(PartyBio,ActorBio[x])
+		PartyBio = Math.LogicalOr(PartyBio,ActorBio[x])
 
 		;; determine what pitchers we have for determining which preg
 		;; chance to use.
-		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast))
+		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast) > 0)
 			BeastCount += 1
-		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioCanInseminate))
+		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioCanInseminate) > 0)
 			MaleCount += 1
 		EndIf
 
@@ -347,6 +370,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	If(Math.LogicalAnd(PartyBio,5) != 5)
 		;; if we didn't have a winning combination of fuel and ovens
 		;; available there is no point in proceeeding.
+		self.PrintDebug("Encounter did not have a viable combo (" + PartyBio + ").")
 		Return
 	EndIf
 
@@ -356,17 +380,25 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	x = 0
 	While(x < ActorList.Length)
 		If(MaleCount > 0)
-			Preg = (self.OptPregChanceHumanoid < Utility.RandomInt(0,100))
+			Preg = (self.OptPregChanceHumanoid >= Utility.RandomInt(0,100))
 		Else
-			Preg = (self.OptPregChanceBeast < Utility.RandomInt(0,100))
+			Preg = (self.OptPregChanceBeast >= Utility.RandomInt(0,100))
 		EndIf
 
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceGems))
+		If(Preg)
+			self.PrintDebug("Preg Chance Success for " + ActorList[x].GetDisplayName())
+		Else
+			self.PrintDebug("Preg Chance Fail for " + ActorList[x].GetDisplayName())
+		EndIf
+
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceGems) > 0)
+			self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
 			self.ActorTrackForGems(ActorList[x],True)
 			self.ActorAddGem(ActorList[x])
 		EndIf
 
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceMilk))
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceMilk) > 0)
+			self.PrintDebug(ActorList[x].GetDisplayName() + " will produce milk.")
 			self.ActorTrackForMilk(ActorList[x],True)
 		EndIf
 
@@ -450,7 +482,12 @@ Float Function ActorGetTimeSinceUpdate(Actor Who, String What)
 been updated. the string value is the storageutil name for the data you want.}
 
 	Float Current = Utility.GetCurrentGameTime()
-	Float Last = StorageUtil.GetFloatValue(Who,What,Current)
+	Float Last = StorageUtil.GetFloatValue(Who,What,0.0)
+
+	If(Last == 0.0)
+		StorageUtil.SetFloatValue(Who,What,Current)
+		Last = Current
+	EndIf
 
 	Return (Current - Last) * 24.0
 EndFunction
@@ -547,6 +584,7 @@ Function ActorUpdateBody_BellyScale(Actor Who)
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
 	Belly = ((Weight / (6 * self.OptGemMaxCapacity)) * self.OptScaleBellyMax) + 1
+	self.PrintDebug(Who.GetDisplayName() + " Belly Scale " + Belly)
 
 	;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;
@@ -575,6 +613,7 @@ Function ActorUpdateBody_BreastScale(Actor Who)
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
 	Breast = ((StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk") / self.OptMilkMaxCapacity) * self.OptScaleBreastMax) + 1
+	self.PrintDebug(Who.GetDisplayName() + " Breast Scale " + Breast)
 
 	;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;
@@ -604,8 +643,10 @@ EndFunction
 Function ActorAddGem(Actor Who)
 {add another gem to this actor's pipeline.}
 
-	StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",0.0,TRUE)
-	self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
+	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") < self.OptGemMaxCapacity)
+		StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",0.0,TRUE)
+		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
+	EndIf
 
 	Return
 EndFunction
@@ -619,6 +660,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
+		self.PrintDebug(Who.GetDisplayName() + " skipping gem calc(" + Time + ").")
 		Return
 	EndIf
 
@@ -636,7 +678,14 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
 		Before = Gem
 
-		Gem += (Time / self.OptGemMatureTime)
+		;; if mature time = 24hr, processed once an hour
+		;; 1 / 24 = 0.0416666/hr * 24 = 1 = one level per day = wrong
+		;; (1 / 24) * 6 = 0.25/hr * 24 = 6 = six level per day = right
+
+		;; if mature time = 144hr (6d), processed once an hour
+		;; (1 / 144) * 6 = 0.0416/hr * 24 = 1 = one level per day = right
+
+		Gem += ((Time / self.OptGemMatureTime) * 6)
 
 		If(Gem <= 6)
 			Progress[Gem as Int] = Progress[Gem as Int] + 1
@@ -662,6 +711,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		self.EventSendGemProgress(Who,Progress)
 	EndIf
 	
+	self.ActorUpdateBody_BellyScale(Who)
 	Return
 EndFunction
 
@@ -682,6 +732,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
+		self.PrintDebug(Who.GetDisplayName() + " skipping milk calc (" + Time + ").")
 		Return
 	EndIf
 
@@ -690,6 +741,9 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	Float Milk = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk",0.0)
 	Float Before = Milk
+
+	;; produce time 8hr (3/day), once an hour
+	;; 1 / 8 = 0.125/hr * 24 = 3 = three per day = right
 
 	Milk += (Time / self.OptMilkProduceTime)
 	If(Milk > self.OptMilkMaxCapacity)
@@ -706,5 +760,6 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		self.EventSendMilkProgress(Who,(Milk as Int))
 	EndIf
 
+	self.ActorUpdateBody_BreastScale(Who)
 	Return
 EndFunction

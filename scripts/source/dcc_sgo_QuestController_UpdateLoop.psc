@@ -28,11 +28,14 @@ Function OnUpdate_GemData()
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Gem")
 	Actor Who
 
+	;;SGO.PrintDebug("Gem List " + Count)
+
 	Int x = 0
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Gem",x) as Actor
 
 		If(Who)
+			;;SGO.PrintDebug("Update Gem Data " + Who.GetDisplayName())
 			SGO.ActorUpdateGemData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
@@ -49,11 +52,14 @@ Function OnUpdate_MilkData()
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Milk")
 	Actor Who
 
+	;;SGO.PrintDebug("Milk List " + Count)
+
 	Int x = 0
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Milk",x) as Actor
 
 		If(Who)
+			;;SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
 			SGO.ActorUpdateMilkData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
