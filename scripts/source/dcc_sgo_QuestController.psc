@@ -93,6 +93,20 @@ dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
 SexLabFramework Property SexLab Auto Hidden
 {the sexlab framework scripting. it will be set by the dependency checker.}
 
+;; mod forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Perk Property dcc_sgo_PerkCanProduceGems Auto
+{an actor with this perk will be able to produce gems if they normally could
+not because of their sex.}
+
+Perk Property dcc_sgo_PerkCanProduceMilk Auto
+{an actor with this perk will be able to produce milk if they normally could
+not because of their sex.}
+
+Perk Property dcc_sgo_PerkCanImpregnate Auto
+{an actor with this perk will be able to impregnate another actors if they
+normally could not because of their sex.}
+
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptGemMatureTime = 144.0 Auto Hidden
@@ -112,6 +126,12 @@ Float Property OptScaleBellyMax = 3.0 Auto Hidden
 
 Float Property OptScaleBreastMax = 2.0 Auto Hidden
 {the maximum size of the breasts when filled up.}
+
+Float Property OptPregChanceHumanoid = 75.0 Auto Hidden
+{preg chance on encounters with people.}
+
+Float Property OptPregChanceBeast = 10.0 Auto Hidden
+{preg chance on encounters with beasts.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -164,7 +184,16 @@ EndFunction
 Function ResetMod_Values()
 {force reset settings to default values.}
 
+	self.OptGemMatureTime = 144.0
+	self.OptGemMaxCapacity = 6
+	self.OptMilkProduceTime = 8.0
+	self.OptMilkMaxCapacity = 3
+	self.OptScaleBellyMax = 3.0
+	self.OptScaleBreastMax = 2.0
+
+	self.OptDebug = TRUE
 	self.OptUpdateInterval = 5.0
+	self.OptUpdateDelay = 0.125
 	Return
 EndFunction
 
@@ -250,10 +279,11 @@ Event OnInit()
 EndEvent
 
 Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
-	Actor[] actors = SexLab.HookActors(Args)
-	sslBaseAnimation ani = SexLab.HookAnimation(Args)
+	Actor[] ActorList = SexLab.HookActors(Args)
+	sslBaseAnimation Animation = SexLab.HookAnimation(Args)
 
 	;; ...
+
 
 	Return
 EndEvent
