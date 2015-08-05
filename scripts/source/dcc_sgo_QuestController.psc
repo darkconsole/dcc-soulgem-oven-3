@@ -95,17 +95,23 @@ SexLabFramework Property SexLab Auto Hidden
 
 ;; mod forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+Perk Property dcc_sgo_PerkCannotProduceGems Auto
+{prevent an actor from producing gems if it normally could.}
+
 Perk Property dcc_sgo_PerkCanProduceGems Auto
-{an actor with this perk will be able to produce gems if they normally could
-not because of their sex.}
+{allow an actor to produce gems if it normally could not.}
+
+Perk Property dcc_sgo_PerkCannotProduceMilk Auto
+{prevent an actor from producing milk if it normally could.}
 
 Perk Property dcc_sgo_PerkCanProduceMilk Auto
-{an actor with this perk will be able to produce milk if they normally could
-not because of their sex.}
+{allow an actor to produce milk if it normally could not}
 
-Perk Property dcc_sgo_PerkCanImpregnate Auto
-{an actor with this perk will be able to impregnate another actors if they
-normally could not because of their sex.}
+Perk Property dcc_sgo_PerkCannotInseminate Auto
+{prevent an actor from inseminating others if it normally could.}
+
+Perk Property dcc_sgo_PerkCanInseminate Auto
+{allow an actor to inseminate others if it normally could not.}
 
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -127,10 +133,10 @@ Float Property OptScaleBellyMax = 3.0 Auto Hidden
 Float Property OptScaleBreastMax = 2.0 Auto Hidden
 {the maximum size of the breasts when filled up.}
 
-Float Property OptPregChanceHumanoid = 75.0 Auto Hidden
+Int Property OptPregChanceHumanoid = 75 Auto Hidden
 {preg chance on encounters with people.}
 
-Float Property OptPregChanceBeast = 10.0 Auto Hidden
+Int Property OptPregChanceBeast = 10 Auto Hidden
 {preg chance on encounters with beasts.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -143,6 +149,13 @@ Float Property OptUpdateInterval = 5.0 Auto Hidden
 
 Float Property OptUpdateDelay = 0.125 Auto Hidden
 {how long to delay the update loop each iteration.}
+
+;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Int Property BioCanProduceGems = 1 AutoReadOnly
+Int Property BioCanProduceMilk = 2 AutoReadOnly
+Int Property BioCanInseminate  = 4 AutoReadOnly
+Int Property BioIsBeast        = 8 AutoReadOnly
 
 ;/*****************************************************************************
                      __                      __              __ 
@@ -214,6 +227,11 @@ Function ResetMod_Events()
 	Return
 EndFunction
 
+Function Print(String Msg)
+	Debug.Notification("[SGO] " + Msg)
+	Return
+EndFunction
+
 ;/*****************************************************************************
      __                            __                        
  .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
@@ -279,11 +297,81 @@ Event OnInit()
 EndEvent
 
 Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
+	
 	Actor[] ActorList = SexLab.HookActors(Args)
+	Int[] ActorBio = PapyrusUtil.IntArray(ActorList.Length)
 	sslBaseAnimation Animation = SexLab.HookAnimation(Args)
+	Int PartyBio = 0
+	Int MaleCount = 0
+	Int BeastCount = 0
+	Bool Preg = 0
+	Int x
 
-	;; ...
+	;;;;;;;;
+	;;;;;;;;
 
+	;; check if the animation type even included penetration.
+
+	If(!Animation.IsVaginal && !Animation.IsAnal)
+		Return
+	EndIf
+
+
+	;;;;;;;;
+	;;;;;;;;
+
+	;; we need to go through the party and determine which biological
+	;; features they are capable of providing to the mix. because of the way
+	;; SexLab animations and just how you play the game in general works,
+	;; all characters able to recieve bounties will get them if there is at
+	;; least one character able to produce them. we cannot really reliably
+	;; trust who is the pitcher and who is the catcher with the animations
+	;; even more so when there is more than two actors.
+
+	x = 0
+	While(x < ActorList.Length)
+		ActorBio[x] = self.ActorGetBiologicalFunctions(ActorList[x])
+		PartyBio = Math.LogicalAnd(PartyBio,ActorBio[x])
+
+		;; determine what pitchers we have for determining which preg
+		;; chance to use.
+		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast))
+			BeastCount += 1
+		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioCanInseminate))
+			MaleCount += 1
+		EndIf
+
+		x += 1
+	EndWhile
+
+	If(Math.LogicalAnd(PartyBio,5) != 5)
+		;; if we didn't have a winning combination of fuel and ovens
+		;; available there is no point in proceeeding.
+		Return
+	EndIf
+
+	;;;;;;;;
+	;;;;;;;;
+
+	x = 0
+	While(x < ActorList.Length)
+		If(MaleCount > 0)
+			Preg = (self.OptPregChanceHumanoid < Utility.RandomInt(0,100))
+		Else
+			Preg = (self.OptPregChanceBeast < Utility.RandomInt(0,100))
+		EndIf
+
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceGems))
+			self.ActorTrackForGems(ActorList[x],True)
+			self.ActorAddGem(ActorList[x])
+		EndIf
+
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceMilk))
+			self.ActorTrackForMilk(ActorList[x],True)
+		EndIf
+
+		x += 1
+	EndWhile
 
 	Return
 EndEvent
@@ -331,6 +419,31 @@ EndFunction
  |___._|____|____|_____|__|     |_____|___._|____|___._|
                                                         
 *****************************************************************************/;
+
+Int Function ActorGetBiologicalFunctions(Actor Who)
+{determine what this actor's body is able to accomplish.}
+
+	Int Value = 0
+	Int Sex = SexLab.GetGender(Who)
+
+	If(Sex == 2)
+		Value += self.BioIsBeast
+	EndIf
+
+	If((Sex != 1 || Who.HasPerk(self.dcc_sgo_PerkCanInseminate)) && !Who.HasPerk(self.dcc_sgo_PerkCannotInseminate))
+		Value += self.BioCanInseminate
+	EndIf
+
+	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceGems)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceGems))
+		Value += self.BioCanProduceGems
+	EndIf
+
+	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceMilk)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceMilk))
+		Value += self.BioCanProduceMilk
+	EndIf
+
+	Return Value
+EndFunction
 
 Float Function ActorGetTimeSinceUpdate(Actor Who, String What)
 {return how many game hours have passed since this actors specified data has
@@ -487,6 +600,15 @@ EndFunction
  |_____|                        |__|      
                                           
 *****************************************************************************/;
+
+Function ActorAddGem(Actor Who)
+{add another gem to this actor's pipeline.}
+
+	StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",0.0,TRUE)
+	self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
+
+	Return
+EndFunction
 
 Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its gem data recalculated. it will generate an array
