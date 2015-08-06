@@ -205,10 +205,10 @@ Function ResetMod_Values()
 	self.OptScaleBreastMax = 0.75
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
-
 	self.OptDebug = TRUE
 	self.OptUpdateInterval = 10.0
 	self.OptUpdateDelay = 0.125
+
 	Return
 EndFunction
 
@@ -239,7 +239,7 @@ Function PrintDebug(String Msg)
 		Return
 	EndIf
 
-	self.Print(Msg)
+	MiscUtil.PrintConsole("[SGO] " + Msg)
 	Return
 EndFunction
 
@@ -571,9 +571,15 @@ Function ActorUpdateBody_BellyScale(Actor Who)
 	Int x = 0
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
 	Float Weight = 0.0
+	Float Current
 
 	While(x < Count)
-		Weight += StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
+		Current = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
+		If(Current > 6.0)
+			Current = 6.0
+		EndIf
+
+		Weight += Current
 		x += 1
 	EndWhile
 
@@ -667,6 +673,10 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;;;;;;;;
 	;;;;;;;;
 
+	;; we allow gems to grow larger than 6 for a mechanic later where we
+	;; will force labour if you wait too long. bodyscaling will clamp it
+	;; to six for the scales though.
+
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
@@ -686,6 +696,9 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		;; (1 / 144) * 6 = 0.0416/hr * 24 = 1 = one level per day = right
 
 		Gem += ((Time / self.OptGemMatureTime) * 6)
+		If(Gem > 12)
+			Gem = 12
+		EndIf
 
 		If(Gem <= 6)
 			Progress[Gem as Int] = Progress[Gem as Int] + 1
