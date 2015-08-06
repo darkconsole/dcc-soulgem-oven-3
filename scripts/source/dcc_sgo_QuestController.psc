@@ -33,18 +33,33 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
 ;; Float[]  SGO.Actor.Data.Gem - the gem data for this actor.
 ;; Float    SGO.Actor.Data.Milk - the milk data for this actor.
+;; String[] SGO.Actor.Mod.ScaleBelly
+;; String[] SGO.Actor.Mod.ScaleBellyMax
+;; String[] SGO.Actor.Mod.ScaleBreast
+;; String[] SGO.Actor.Mod.ScaleBreastMax
+;; String[] SGO.Actor.Mod.GemProductionRate
+;; String[] SGO.Actor.Mod.GemProductionTime
+;; String[] SGO.Actor.Mod.MilkProductionRate
+;; String[] SGO.Actor.Mod.MilkProductionTime
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Method List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; these are the methods which have been designed to be used by mods that wish
 ;; to integrate with soulgem oven.
 
-;; SGO.ActorGetTimeSinceUpdate(Actor, String)
-;; SGO.ActorSetTimeUpdated(Actor, String[, Float])
-;; SGO.ActorTrackForMilk(Actor, Bool)
-;; SGO.ActorTrackForGems(Actor, Bool)
-;; SGO.ActorUpdateMilkData(Actor, Bool)
-;; SGO.ActorUpdateGemData(Actor, Bool)
+;; Float SGO.ActorGetGemWeight(Actor Who)
+;; Float SGO.ActorGetMilkWeight(Actor Who)
+;; Float SGO.ActorGetTimeSinceUpdate(Actor Who, String What)
+;; Void  SGO.ActorSetTimeUpdated(Actor Who, String What[, Float When])
+;; Void  SGO.ActorTrackForGems(Actor Who, Bool Enabled)
+;; Void  SGO.ActorTrackForMilk(Actor who, Bool Enabled)
+;; Void  SGO.ActorUpdateGemData(Actor Who, Bool Force)
+;; Void  SGO.ActorUpdateMilkData(Actor Who, Bool Force)
+;; Float SGO.ActorModGetTotal(Actor Who, String What)
+;; Float SGO.ActorModGetValue(Actor Who, String What, String ModKey)
+;; Void  SGO.ActorModSetValue(Actor Who, String What, String ModKey)
+;; Void  SGO.ActorModUnsetValue(Actor Who, String What, String ModKey)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Event List ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -505,6 +520,66 @@ is the storageutil name for the data you want.}
 EndFunction
 
 ;/*****************************************************************************
+             __                              __                       __       
+ .---.-.----|  |_.-----.----.   .--.--.---.-|  |   .--------.-----.--|  .-----.
+ |  _  |  __|   _|  _  |   _|   |  |  |  _  |  |   |        |  _  |  _  |__ --|
+ |___._|____|____|_____|__|      \___/|___._|__|   |__|__|__|_____|_____|_____|
+
+*****************************************************************************/;
+
+Float Function ActorModGetTotal(Actor Who, String What)
+{fetch the sum of all the mods so.}
+
+	What = "SGO.Actor.Mod." + What
+
+	Int x
+	Int Count = StorageUtil.StringListCount(Who,What)
+	String ModKey
+	Float Value
+	
+	x = 0
+	While(x < Count)
+		ModKey = StorageUtil.StringListGet(Who,What,x)
+		Value += StorageUtil.GetFloatValue(Who,ModKey)
+		x += 1
+	EndWhile
+
+	Return Value
+EndFunction
+
+Float Function ActorModGetValue(Actor Who, String ModKey)
+{fetch the specified actor mod.}
+
+	ModKey = "SGO.ActorModValue." + ModKey
+
+	Return StorageUtil.GetFloatValue(Who,ModKey,0.0)
+EndFunction
+
+Function ActorModSetValue(Actor Who, String What, String ModKey, Float Value=0.0)
+{set a specified actor mod.}
+
+	What = "SGO.Actor.Mod." + What
+	ModKey = "SGO.ActorModValue." + ModKey
+
+	StorageUtil.StringListAdd(Who,What,ModKey,FALSE)
+	StorageUtil.SetFloatValue(Who,ModKey,Value)
+
+	Return
+EndFunction
+
+Function ActorModUnsetValue(Actor Who, String What, String ModKey)
+{remove a specified actor mod.}
+
+	What = "SGO.Actor.Mod." + What
+	ModKey = "SGO.ActorModValue." + ModKey
+
+	StorageUtil.StringListRemove(Who,What,ModKey,TRUE)
+	StorageUtil.UnsetFloatValue(Who,ModKey)
+
+	Return
+EndFunction
+
+;/*****************************************************************************
   __                   __    __                             __ 
  |  |_.----.---.-.----|  |--|__.-----.-----.   .---.-.-----|__|
  |   _|   _|  _  |  __|    <|  |     |  _  |   |  _  |  _  |  |
@@ -562,7 +637,7 @@ EndFunction
 Function ActorUpdateBody_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
-	Float Belly = 1.0
+	Float Belly = 1.0 + self.ActorModGetTotal(Who,"ScaleBelly")
 	Bool Female = (Who.GetActorBase().GetSex() == 1)
 
 	;;;;;;;;;;;;;;;;
@@ -589,7 +664,7 @@ Function ActorUpdateBody_BellyScale(Actor Who)
 	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
-	Belly = ((Weight / (6 * self.OptGemMaxCapacity)) * self.OptScaleBellyMax) + 1
+	Belly = ((Weight / (6 * self.OptGemMaxCapacity)) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
 	self.PrintDebug(Who.GetDisplayName() + " Belly Scale " + Belly)
 
 	;;;;;;;;;;;;;;;;
@@ -655,6 +730,27 @@ Function ActorAddGem(Actor Who)
 	EndIf
 
 	Return
+EndFunction
+
+Float Function ActorGetGemWeight(Actor Who, Bool Overflow=FALSE)
+{find the current gem weight being carried.}
+
+	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+	Float Weight = 0.0
+	Float Current = 0.0
+	Int x = 0
+
+	While(x < Count)
+		Current = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
+		If(!Overflow && Current > 6)
+			Current = 6
+		EndIf
+
+		Weight += Current
+		x += 1
+	EndWhile
+
+	Return Weight
 EndFunction
 
 Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
@@ -775,4 +871,16 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	self.ActorUpdateBody_BreastScale(Who)
 	Return
+EndFunction
+
+Float Function ActorGetMilkWeight(Actor Who)
+{find the current milk weight being carried.}
+
+	Return StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk")
+EndFunction
+
+Float Function ActorGetMilkProductionFactor(Actor Who)
+{figure out how fast this actor should be generating milk.}
+
+	Return (self.ActorGetGemWeight(Who) / (6 * self.OptGemMaxCapacity)) + self.ActorModGetTotal(Who,"MilkProductionFactor")
 EndFunction
