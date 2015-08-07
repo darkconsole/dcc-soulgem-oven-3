@@ -36,7 +36,7 @@ Function OnUpdate_GemData()
 
 		If(Who)
 			;;SGO.PrintDebug("Update Gem Data " + Who.GetDisplayName())
-			SGO.ActorUpdateGemData(Who)
+			SGO.ActorGemUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 
@@ -60,7 +60,7 @@ Function OnUpdate_MilkData()
 
 		If(Who)
 			;;SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
-			SGO.ActorUpdateMilkData(Who)
+			SGO.ActorMilkUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 

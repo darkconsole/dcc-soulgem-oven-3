@@ -37,10 +37,10 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; String[] SGO.Actor.Mod.ScaleBellyMax
 ;; String[] SGO.Actor.Mod.ScaleBreast
 ;; String[] SGO.Actor.Mod.ScaleBreastMax
-;; String[] SGO.Actor.Mod.GemProductionRate
-;; String[] SGO.Actor.Mod.GemProductionTime
-;; String[] SGO.Actor.Mod.MilkProductionRate
-;; String[] SGO.Actor.Mod.MilkProductionTime
+;; String[] SGO.Actor.Mod.GemCapacity
+;; String[] SGO.Actor.Mod.GemRate
+;; String[] SGO.Actor.Mod.MilkCapacity
+;; String[] SGO.Actor.Mod.MilkRate
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -48,14 +48,22 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; these are the methods which have been designed to be used by mods that wish
 ;; to integrate with soulgem oven.
 
-;; Float SGO.ActorGetGemWeight(Actor Who)
-;; Float SGO.ActorGetMilkWeight(Actor Who)
+;; Int   SGO.ActorGemGetCapacity(Actor Who)
+;; Float SGO.ActorGemGetTime(Actor Who)
+;; Float SGO.ActorGemGetWeight(Actor Who)
+
+;; Int   SGO.ActorMilkGetCapacity(Actor Who)
+;; Float SGO.ACtorMilkGetTime(Actor Who)
+;; Float SGO.ActorMilkGetWeight(Actor Who)
+
 ;; Float SGO.ActorGetTimeSinceUpdate(Actor Who, String What)
 ;; Void  SGO.ActorSetTimeUpdated(Actor Who, String What[, Float When])
+
 ;; Void  SGO.ActorTrackForGems(Actor Who, Bool Enabled)
 ;; Void  SGO.ActorTrackForMilk(Actor who, Bool Enabled)
-;; Void  SGO.ActorUpdateGemData(Actor Who, Bool Force)
-;; Void  SGO.ActorUpdateMilkData(Actor Who, Bool Force)
+
+;; Void  SGO.ActorGemUpdateData(Actor Who, Bool Force)
+;; Void  SGO.ActorMilkUpdateData(Actor Who, Bool Force)
 ;; Float SGO.ActorModGetTotal(Actor Who, String What)
 ;; Float SGO.ActorModGetValue(Actor Who, String What, String ModKey)
 ;; Void  SGO.ActorModSetValue(Actor Who, String What, String ModKey)
@@ -216,8 +224,8 @@ Function ResetMod_Values()
 	self.OptGemMaxCapacity = 6
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
-	self.OptScaleBellyMax = 3.0
-	self.OptScaleBreastMax = 0.75
+	self.OptScaleBellyMax = 4.0
+	self.OptScaleBreastMax = 1.0
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptDebug = TRUE
@@ -245,11 +253,15 @@ Function ResetMod_Events()
 EndFunction
 
 Function Print(String Msg)
+{send a message to the notification area.}
+
 	Debug.Notification("[SGO] " + Msg)
 	Return
 EndFunction
 
 Function PrintDebug(String Msg)
+{send a message to the console.}
+
 	If(!self.OptDebug)
 		Return
 	EndIf
@@ -316,6 +328,8 @@ EndFunction
 *****************************************************************************/;
 
 Event OnInit()
+{handler for installing and resetting}
+
 	self.OK = FALSE
 	self.ResetMod_Prepare()
 	self.ResetMod_Values()
@@ -332,7 +346,8 @@ Event OnInit()
 EndEvent
 
 Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
-	
+{handler for sexlab encounters ending.}
+
 	self.PrintDebug("OnEncounterEnding Fired")
 
 	Actor[] ActorList = SexLab.HookActors(Args)
@@ -409,7 +424,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceGems) > 0)
 			self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
 			self.ActorTrackForGems(ActorList[x],True)
-			self.ActorAddGem(ActorList[x])
+			self.ActorGemAdd(ActorList[x])
 		EndIf
 
 		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceMilk) > 0)
@@ -625,16 +640,16 @@ EndFunction
 
 *****************************************************************************/;
 
-Function ActorUpdateBody(Actor Who)
+Function ActorBodyUpdate(Actor Who)
 {push the updated visual data into NiOverride. cheers to Groovtama for helping
 witht he NiO stuffs.}
 
-	self.ActorUpdateBody_BellyScale(Who)
-	self.ActorUpdateBody_BreastScale(Who)
+	self.ActorBodyUpdate_BellyScale(Who)
+	self.ActorBodyUpdate_BreastScale(Who)
 	Return
 EndFunction
 
-Function ActorUpdateBody_BellyScale(Actor Who)
+Function ActorBodyUpdate_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
 	Float Belly = 1.0 + self.ActorModGetTotal(Who,"ScaleBelly")
@@ -680,10 +695,10 @@ Function ActorUpdateBody_BellyScale(Actor Who)
 	Return
 EndFunction
 
-Function ActorUpdateBody_BreastScale(Actor Who)
+Function ActorBodyUpdate_BreastScale(Actor Who)
 {handle the physical representation of the breasts.}
 	
-	Float Breast = 1.0
+	Float Breast = 1.0 + self.ActorModGetTotal(Who,"ScaleBreast")
 	Bool Female = (Who.GetActorBase().GetSex() == 1)
 
 	;;;;;;;;;;;;;;;;
@@ -693,7 +708,7 @@ Function ActorUpdateBody_BreastScale(Actor Who)
 	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
-	Breast = ((StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk") / self.OptMilkMaxCapacity) * self.OptScaleBreastMax) + 1
+	Breast = ((StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk") / self.OptMilkMaxCapacity) * (self.OptScaleBreastMax + self.ActorModGetTotal(Who,"ScaleBreastMax"))) + 1
 	self.PrintDebug(Who.GetDisplayName() + " Breast Scale " + Breast)
 
 	;;;;;;;;;;;;;;;;
@@ -721,10 +736,10 @@ EndFunction
                                           
 *****************************************************************************/;
 
-Function ActorAddGem(Actor Who)
+Function ActorGemAdd(Actor Who)
 {add another gem to this actor's pipeline.}
 
-	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") < self.OptGemMaxCapacity)
+	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") < self.ActorGemGetCapacity(Who))
 		StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",0.0,TRUE)
 		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
 	EndIf
@@ -732,7 +747,23 @@ Function ActorAddGem(Actor Who)
 	Return
 EndFunction
 
-Float Function ActorGetGemWeight(Actor Who, Bool Overflow=FALSE)
+Int Function ActorGemGetCapacity(Actor Who)
+{determine how many gems this actor should be able to carry.}
+
+	;; no mods return 0. a mod total of 1.5 means i want to
+	;; be able to carry 150% more gems.
+	Return (self.OptGemMaxCapacity * (self.ActorModGetTotal(Who,"GemCapacity") + 1)) as Int
+EndFunction
+
+Float Function ActorGemGetTime(Actor Who)
+{determine how fast gems should be generating for this actor.}
+
+	;; the mod is 0 when empty. if we have a total of 1.5 that means i want
+	;; 150% more time spent to mature the gem.
+	Return self.OptGemMatureTime * (self.ActorModGetTotal(Who,"GemRate") + 1)
+EndFunction
+
+Float Function ActorGemGetWeight(Actor Who, Bool Overflow=FALSE)
 {find the current gem weight being carried.}
 
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
@@ -753,7 +784,7 @@ Float Function ActorGetGemWeight(Actor Who, Bool Overflow=FALSE)
 	Return Weight
 EndFunction
 
-Function ActorUpdateGemData(Actor Who, Bool Force=FALSE)
+Function ActorGemUpdateData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its gem data recalculated. it will generate an array
 that is a snapshot of the current gem states, and that snapshot will be emitted
 in a mod event if a gem reached the next stage. this is probably the heaviest
@@ -791,7 +822,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		;; if mature time = 144hr (6d), processed once an hour
 		;; (1 / 144) * 6 = 0.0416/hr * 24 = 1 = one level per day = right
 
-		Gem += ((Time / self.OptGemMatureTime) * 6)
+		Gem += ((Time / self.ActorGemGetTime(Who)) * 6)
 		If(Gem > 12)
 			Gem = 12
 		EndIf
@@ -820,7 +851,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		self.EventSendGemProgress(Who,Progress)
 	EndIf
 	
-	self.ActorUpdateBody_BellyScale(Who)
+	self.ActorBodyUpdate_BellyScale(Who)
 	Return
 EndFunction
 
@@ -833,7 +864,27 @@ EndFunction
 
 *****************************************************************************/;
 
-Function ActorUpdateMilkData(Actor Who, Bool Force=FALSE)
+Int Function ActorMilkGetCapacity(Actor Who)
+{figure out how much milk this actor can carry.}
+
+	;; no mods return a default of 0. a mod of 1.5 means i want to be able to
+	;; carry 150% more milks.
+	Return (self.OptMilkMaxCapacity * (self.ActorModGetTotal(Who,"MilkCapacity") + 1)) as Int
+EndFunction
+
+Float Function ActorMilkGetTime(Actor Who)
+{figure out how fast this actor is generating milk.}
+
+	Return (self.OptMilkProduceTime * (self.ActorModGetTotal(Who,"MilkRate") + 1))
+EndFunction
+
+Float Function ActorMilkGetWeight(Actor Who)
+{find the current milk weight being carried.}
+
+	Return StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk")
+EndFunction
+
+Function ActorMilkUpdateData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its milk data recalculated. if we have gained another
 full bottle then emit a mod event saying how many bottles are ready to go.}
 
@@ -854,9 +905,9 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;; produce time 8hr (3/day), once an hour
 	;; 1 / 8 = 0.125/hr * 24 = 3 = three per day = right
 
-	Milk += (Time / self.OptMilkProduceTime)
-	If(Milk > self.OptMilkMaxCapacity)
-		Milk = self.OptMilkMaxCapacity
+	Milk += (Time / self.ActorMilkGetTime(Who))
+	If(Milk > self.ActorMilkGetCapacity(Who))
+		Milk = self.ActorMilkGetCapacity(Who)
 	EndIf
 
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Milk",Milk)
@@ -869,18 +920,6 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		self.EventSendMilkProgress(Who,(Milk as Int))
 	EndIf
 
-	self.ActorUpdateBody_BreastScale(Who)
+	self.ActorBodyUpdate_BreastScale(Who)
 	Return
-EndFunction
-
-Float Function ActorGetMilkWeight(Actor Who)
-{find the current milk weight being carried.}
-
-	Return StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk")
-EndFunction
-
-Float Function ActorGetMilkProductionFactor(Actor Who)
-{figure out how fast this actor should be generating milk.}
-
-	Return (self.ActorGetGemWeight(Who) / (6 * self.OptGemMaxCapacity)) + self.ActorModGetTotal(Who,"MilkProductionFactor")
 EndFunction
