@@ -116,6 +116,17 @@ dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
 SexLabFramework Property SexLab Auto Hidden
 {the sexlab framework scripting. it will be set by the dependency checker.}
 
+;; vanilla forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Soulgem[] Property SoulgemEmpty Auto
+{objects we will hand out if empty birth is selected. 6 el array filled in ck.}
+
+Soulgem[] Property SoulgemFull Auto
+{objects we will hand out if full birth is selected. 6 el array filled in ck.}
+
+MiscObject[] Property SoulgemFragment Auto
+{what we will hand out if a gem isn't yet mature enough for petty.}
+
 ;; mod forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Perk Property dcc_sgo_PerkCannotProduceGems Auto
@@ -138,39 +149,48 @@ Perk Property dcc_sgo_PerkCanInseminate Auto
 
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptGemMatureTime Auto Hidden
+Float Property OptGemMatureTime = 144.0 Auto Hidden
 {how many hours for a gem to mature. default 144 = 6 days.}
 
-Int Property OptGemMaxCapacity Auto Hidden
+Int Property OptGemMaxCapacity = 6 Auto Hidden
 {how many gems can be carried at one time.}
 
-Float Property OptMilkProduceTime Auto Hidden
+Bool Property OptGemFilled = TRUE Auto Hidden
+{if we should give filled gems or empty gems.}
+
+Float Property OptMilkProduceTime = 8.0 Auto Hidden
 {how many hours for milk to produce. default 8 = 3 per day.}
 
-Int Property OptMilkMaxCapacity Auto Hidden
+Int Property OptMilkMaxCapacity = 3 Auto Hidden
 {how many bottles of milk can be carried at one time.}
 
-Float Property OptScaleBellyMax Auto Hidden
+Float Property OptScaleBellyMax = 4.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastMax Auto Hidden
+Float Property OptScaleBreastMax = 1.0 Auto Hidden
 {the maximum size of the breasts when filled up.}
 
-Int Property OptPregChanceHumanoid Auto Hidden
+Int Property OptPregChanceHumanoid = 75 Auto Hidden
 {preg chance on encounters with people.}
 
-Int Property OptPregChanceBeast Auto Hidden
+Int Property OptPregChanceBeast = 10 Auto Hidden
 {preg chance on encounters with beasts.}
+
+Bool Property OptImmersivePlayer = TRUE Auto Hidden
+{if we should show messages about the player state.}
+
+Bool Property OptImmersiveNPC = TRUE Auto Hidden
+{if we should show messages about npc states.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool  Property OptDebug Auto Hidden
+Bool  Property OptDebug = TRUE Auto Hidden
 {print debugging information out to the console}
 
-Float Property OptUpdateInterval Auto Hidden
+Float Property OptUpdateInterval = 10.0 Auto Hidden
 {how long to wait before beginning the calculation queue again.}
 
-Float Property OptUpdateDelay Auto Hidden
+Float Property OptUpdateDelay = 0.125 Auto Hidden
 {how long to delay the update loop each iteration.}
 
 ;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -222,12 +242,15 @@ Function ResetMod_Values()
 
 	self.OptGemMatureTime = 144.0
 	self.OptGemMaxCapacity = 6
+	self.OptGemFilled = TRUE
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
 	self.OptScaleBellyMax = 4.0
 	self.OptScaleBreastMax = 1.0
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
+	self.OptImmersivePlayer = TRUE
+	self.OptImmersiveNPC = TRUE
 	self.OptDebug = TRUE
 	self.OptUpdateInterval = 10.0
 	self.OptUpdateDelay = 0.125
@@ -747,6 +770,50 @@ Function ActorGemAdd(Actor Who)
 	Return
 EndFunction
 
+Function ActorGemGiveTo(Actor Source, Actor Dest, Int Count=1)
+{transfer a gem from one actor's oven to another actors inventory. both actors
+can be the same. this will mainly be used for a lulz transfer animation if
+i can find a lesbian one that is suitable or get an animator to make me one.}
+
+	Form GemType = self.ActorGemRemove(Source)
+	If(GemType == None)
+		self.Print(Source.GetDisplayName() + " has no more gems to give.")
+		Return
+	EndIf
+
+	Dest.AddItem(GemType,1)
+	Return
+EndFunction
+
+Form Function ActorGemRemove(Actor Who)
+{remove the next gem from the specified actor. returns a form describing
+what object we should spawn in the world. this will be used mostly by the
+gem place and gem give functions.}
+
+	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",0)
+	StorageUtil.FormListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
+
+	If(Value == 0.0)
+		Return None
+	EndIf
+
+	If(Value < 1.0)
+		Return self.SoulgemFragment[Utility.RandomInt(0,self.SoulgemFragment.Length)] as Form
+	EndIf
+
+	If(Value > 6.0)
+		Value = 6
+	EndIf
+
+	If(self.OptGemFilled)
+		Return self.SoulgemFull[Value as Int]
+	Else
+		Return self.SoulgemEmpty[Value as Int]
+	EndIf
+EndFunction
+
+;;;;;;;;
+
 Int Function ActorGemGetCapacity(Actor Who)
 {determine how many gems this actor should be able to carry.}
 
@@ -848,7 +915,12 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;;;;;;;;
 
 	If(Progressed)
+		self.ImmersiveGemProgress(Who)
 		self.EventSendGemProgress(Who,Progress)
+	Else
+		If(Progress[6] >= self.ActorModGetTotal(Who,"GemCapacity"))
+			self.ImmersiveGemFull(Who)
+		EndIf
 	EndIf
 	
 	self.ActorBodyUpdate_BellyScale(Who)
@@ -863,6 +935,18 @@ EndFunction
                                 |__|      
 
 *****************************************************************************/;
+
+Function ActorMilkGiveTo(Actor Source, Actor Dest, Int Count=1)
+
+	Return
+EndFunction
+
+Function ActorMilkRemove(Actor Who)
+
+	Return
+EndFunction
+
+;;;;;;;;
 
 Int Function ActorMilkGetCapacity(Actor Who)
 {figure out how much milk this actor can carry.}
@@ -899,6 +983,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;;;;;;;;
 	;;;;;;;;
 
+	Float Capacity = self.ActorMilkGetCapacity(Who)
 	Float Milk = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk",0.0)
 	Float Before = Milk
 
@@ -906,8 +991,9 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;; 1 / 8 = 0.125/hr * 24 = 3 = three per day = right
 
 	Milk += (Time / self.ActorMilkGetTime(Who))
-	If(Milk > self.ActorMilkGetCapacity(Who))
-		Milk = self.ActorMilkGetCapacity(Who)
+	If(Milk > Capacity)
+		self.ImmersiveMilkFull(Who)
+		Milk = Capacity
 	EndIf
 
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Milk",Milk)
@@ -917,9 +1003,43 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;;;;;;;;
 
 	If(Before as Int != Milk as Int)
+		self.ImmersiveMilkProgress(Who)
 		self.EventSendMilkProgress(Who,(Milk as Int))
 	EndIf
 
 	self.ActorBodyUpdate_BreastScale(Who)
+	Return
+EndFunction
+
+
+;/*****************************************************************************
+  __                                    __               __     __   
+ |__.--------.--------.-----.----.-----|__.-----.-----._|  |_ _|  |_ 
+ |  |        |        |  -__|   _|__ --|  |  _  |     |_    _|_    _|
+ |__|__|__|__|__|__|__|_____|__| |_____|__|_____|__|__| |__|   |__|  
+                                                                     
+*****************************************************************************/;
+
+Function ImmersiveGemFull(Actor Who)
+{send messages about gem fullness.}
+
+	Return
+EndFunction
+
+Function ImmersiveGemProgress(Actor Who)
+{send messages about gem progression.}
+
+	Return
+EndFunction
+
+Function ImmersiveMilkFull(Actor Who)
+{send messages about milk being full.}
+
+	Return
+EndFunction
+
+Function ImmersiveMilkProgress(Actor Who)
+{send messages about milk progression.}
+
 	Return
 EndFunction
