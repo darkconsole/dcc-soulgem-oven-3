@@ -210,10 +210,10 @@ Float Property OptUpdateDelay = 0.125 Auto Hidden
 
 ;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Int Property BioCanProduceGems = 1 AutoReadOnly
-Int Property BioCanProduceMilk = 2 AutoReadOnly
-Int Property BioCanInseminate  = 4 AutoReadOnly
-Int Property BioIsBeast        = 8 AutoReadOnly
+Int Property BioProduceGems = 1 AutoReadOnly
+Int Property BioProduceMilk = 2 AutoReadOnly
+Int Property BioInseminate  = 4 AutoReadOnly
+Int Property BioIsBeast     = 8 AutoReadOnly
 
 ;/*****************************************************************************
                      __                      __              __ 
@@ -461,7 +461,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 		;; chance to use.
 		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast) > 0)
 			BeastCount += 1
-		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioCanInseminate) > 0)
+		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioInseminate) > 0)
 			MaleCount += 1
 		EndIf
 
@@ -492,13 +492,13 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 			self.PrintDebug("Preg Chance Fail for " + ActorList[x].GetDisplayName())
 		EndIf
 
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceGems) > 0)
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioProduceGems) > 0)
 			self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
 			self.ActorTrackForGems(ActorList[x],True)
 			self.ActorGemAdd(ActorList[x])
 		EndIf
 
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioCanProduceMilk) > 0)
+		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioProduceMilk) > 0)
 			self.PrintDebug(ActorList[x].GetDisplayName() + " will produce milk.")
 			self.ActorTrackForMilk(ActorList[x],True)
 		EndIf
@@ -554,7 +554,8 @@ EndFunction
 *****************************************************************************/;
 
 Int Function ActorGetBiologicalFunctions(Actor Who)
-{determine what this actor's body is able to accomplish.}
+{determine what this actor's body is able to accomplish. returns a bitwised
+integer that defines the capaiblities of this actor.}
 
 	Int Value = 0
 	Int Sex = SexLab.GetGender(Who)
@@ -564,18 +565,63 @@ Int Function ActorGetBiologicalFunctions(Actor Who)
 	EndIf
 
 	If((Sex != 1 || Who.HasPerk(self.dcc_sgo_PerkCanInseminate)) && !Who.HasPerk(self.dcc_sgo_PerkCannotInseminate))
-		Value += self.BioCanInseminate
+		Value += self.BioInseminate
 	EndIf
 
 	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceGems)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceGems))
-		Value += self.BioCanProduceGems
+		Value += self.BioProduceGems
 	EndIf
 
 	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceMilk)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceMilk))
-		Value += self.BioCanProduceMilk
+		Value += self.BioProduceMilk
 	EndIf
 
 	Return Value
+EndFunction
+
+Function ActorSetBiologicalFunction(Actor Who, Int Func, Bool Enable)
+{set this actor's biological functions. this function does not do bitwise so
+you must do each function individually.}
+
+	;; todo - re-engineer the inner workings of this method to allow
+	;; for a bitwise operation instead.
+
+	Perk ToEnable
+	Perk ToDisable
+
+	If(Func == self.BioProduceGems)
+		ToEnable = self.dcc_sgo_PerkCanProduceGems
+		ToDisable = self.dcc_sgo_PerkCannotProduceGems
+	ElseIf(Func == self.BioProduceMilk)
+		ToEnable = self.dcc_sgo_PerkCanProduceMilk
+		ToDisable = self.dcc_sgo_PerkCannotProduceMilk
+	ElseIf(Func == self.BioInseminate)
+		ToEnable = self.dcc_sgo_PerkCanInseminate
+		ToDisable = self.dcc_sgo_PerkCannotInseminate
+	EndIf
+
+	If(Enable)
+		Who.RemovePerk(ToDisable)
+		Who.AddPerk(ToEnable)
+	Else
+		Who.RemovePerk(ToEnable)
+		Who.AddPerk(ToDisable)
+	EndIf
+
+	Return
+EndFunction
+
+Function ActorToggleBiologicalFunction(Actor Who, Int Func)
+{toggle this actor's biological functions. this method does not work in
+bitwise so you must do each function indivdually.}
+
+	If(Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),Func) == Func)
+		self.ActorSetBiologicalFunction(Who,Func,FALSE)
+	Else
+		self.ActorSetBiologicalFunction(Who,Func,TRUE)
+	EndIf
+
+	Return
 EndFunction
 
 Float Function ActorGetTimeSinceUpdate(Actor Who, String What)
@@ -912,7 +958,12 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 		EndIf
 
 		If(Dest == None)
-			;; place object in the world.
+			;; without a destination drop the gem the ground.
+			ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
+			o.MoveToNode(Source,"Vagina")
+			o.SetActorOwner(self.Player.GetActorBase())
+			o.Enable()
+			o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
 		Else
 			;; else put it in the bag.
 			Dest.AddItem(GemType,1)
@@ -920,6 +971,7 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 
 		x += 1
 	EndWhile
+
 	Return
 EndFunction
 
@@ -929,14 +981,14 @@ what object we should spawn in the world. this will be used mostly by the
 gem place and gem give functions.}
 
 	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",0)
-	StorageUtil.FormListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
+	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
 
-	If(Value == 0.0)
-		Return None
-	EndIf
+	;;If(Value == 0.0)
+	;;	Return None
+	;;EndIf
 
 	If(Value < 1.0)
-		Return self.SoulgemFragment[Utility.RandomInt(0,self.SoulgemFragment.Length)] as Form
+		Return self.SoulgemFragment[Utility.RandomInt(0,(self.SoulgemFragment.Length - 1))] as Form
 	EndIf
 
 	If(Value > 6.0)
@@ -944,9 +996,9 @@ gem place and gem give functions.}
 	EndIf
 
 	If(self.OptGemFilled)
-		Return self.SoulgemFull[Value as Int]
+		Return self.SoulgemFull[((Value as Int) - 1)]
 	Else
-		Return self.SoulgemEmpty[Value as Int]
+		Return self.SoulgemEmpty[((Value as Int) - 1)]
 	EndIf
 EndFunction
 
@@ -1223,8 +1275,60 @@ EndFunction
 *****************************************************************************/;
 
 Function ActorActionBirth(Actor Source, Actor Dest)
+{perform the full birthing sequence.}
+
+	If(self.ActorGemGetCount(Source) == 0)
+		self.Print(Source.GetDisplayName() + " is not ready for labour.")
+		Return
+	EndIf
+
+	If(Source == Dest)
+		self.ActorActionBirth_Solo(Source)
+	Else
+		self.ActorActionBirth_Duo(Source,Dest)
+	EndIf
 
 	Return
+EndFunction
+
+Function ActorActionBirth_Solo(Actor Source)
+{single actor birthing sequence.}
+
+	self.BehaviourDefault(Source)
+	self.ActorRemoveChestpiece(Source)
+	self.ImmersiveAnimationBirthing(Source)
+	self.ImmersiveAboutFace(Source)
+	MiscUtil.SetFreeCameraState(TRUE,6.0)
+
+	While(self.ActorGemGetCount(Source) > 0)
+		Utility.Wait(3.0)
+		self.ImmersiveBlush(Source,1.0,3,3.0)
+		self.ImmersiveExpression(Source,FALSE)
+		Utility.Wait(3.0)
+		self.ImmersiveExpression(Source,TRUE)
+		self.ImmersiveSoundMoan(Source,FALSE)
+		Utility.Wait(3.0)
+		self.ImmersiveSoundMoan(Source,TRUE)
+		self.ActorGemGiveTo(Source,None,1)
+		self.ActorBodyUpdate_BellyScale(Source)
+	EndWhile
+
+	MiscUtil.SetFreeCameraState(FALSE)
+	self.ImmersiveExpression(Source,FALSE)
+	self.ImmersiveAboutFace(Source)
+	self.ImmersiveAnimationIdle(Source)
+	self.ActorReplaceChestpiece(Source)
+	self.BehaviourClear(Source,TRUE)
+
+	Return
+EndFunction
+
+Function ActorActionBirth_Duo(Actor Source, Actor Dest)
+{dual actor birthing sequence. i plan this to be the transfer animation.}
+
+	;; todo
+
+	return
 EndFunction
 
 Function ActorActionMilk(Actor Source, Actor Dest)
@@ -1378,11 +1482,17 @@ Function ImmersiveSoundMoan(Actor Who, Bool Hard=FALSE)
 	StorageUtil.SetIntValue(Who,"SGO.Actor.Sound.Moan",Moan.Play(who))
 EndFunction
 
+Function ImmersiveAboutFace(Actor Who)
+{spin the actor around 180deg.}
+
+	Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
+	Return
+EndFunction
+
 Function ImmersiveAnimationBirthing(Actor Who)
 {play a birthing animation on the actor.}
 
 	Debug.SendAnimationEvent(who,"Missionary_A1_S4")
-	;;Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
 	Return
 EndFunction
 
@@ -1441,6 +1551,38 @@ EndFunction
 Function MenuMain_Construct(Actor Who)
 {construct the menu for the main sgo menu.}
 
+	Int ActorBio = self.ActorGetBiologicalFunctions(Who)
+
+	;;;;;;;;
+
+	Bool ItemToggleGemEnable = TRUE
+	String ItemToggleGemLabel = "Enable Gems"
+	String ItemToggleGemText = "Toggle gem pregnancy on/off."
+
+	If(Math.LogicalAnd(ActorBio,self.BioProduceGems) == self.BioProduceGems)
+		ItemToggleGemLabel = "Disable Gems"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemToggleMilkEnable = TRUE
+	String ItemToggleMilkLabel = "Enable Milk"
+	String ItemToggleMilkText = "Toggle milk production on/off."
+
+	If(Math.LogicalAnd(ActorBio,self.BioProduceMilk) == self.BioProduceMilk)
+		ItemToggleMilklabel = "Disable Milk"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemToggleInseminateEnable = TRUE
+	String ItemToggleInseminateLabel = "Enable Inseminate"
+	String ItemToggleInseminateText = "Toggle to inseminate others on/off."
+
+	If(Math.LogicalAnd(ActorBio,self.BioInseminate) == self.BioInseminate)
+		ItemToggleInseminateLabel = "Disable Inseminate"
+	EndIf
+
 	;;;;;;;;
 
 	Bool ItemBirthEnable = FALSE
@@ -1466,6 +1608,9 @@ Function MenuMain_Construct(Actor Who)
 	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
+	self.MenuWheelSetItem(0,ItemToggleGemLabel,ItemToggleGemText,ItemToggleGemEnable)
+	self.MenuWheelSetItem(1,ItemToggleMilkLabel,ItemToggleMilkText,ItemToggleMilkEnable)
+	self.MenuWheelSetItem(2,ItemToggleInseminateLabel,ItemToggleInseminateText,ItemToggleInseminateEnable)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 
@@ -1477,7 +1622,13 @@ Function MenuMain_Handle(Actor Who)
 
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
 
-	If(Result == 4)
+	If(Result == 0)
+		self.ActorToggleBiologicalFunction(Who,self.BioProduceGems)
+	ElseIf(Result == 1)
+		self.ActorToggleBiologicalFunction(Who,self.BioProduceMilk)
+	ElseIf(Result == 2)
+		self.ActorToggleBiologicalFunction(Who,self.BioInseminate)
+	ElseIf(Result == 4)
 		self.ActorActionBirth(Who,Who)
 	ElseIf(Result == 5)
 		self.ActorActionMilk(Who,Who)
