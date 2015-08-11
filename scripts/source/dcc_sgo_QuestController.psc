@@ -182,7 +182,7 @@ Int Property OptMilkMaxCapacity = 3 Auto Hidden
 Float Property OptScaleBellyMax = 4.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastMax = 1.0 Auto Hidden
+Float Property OptScaleBreastMax = 1.5 Auto Hidden
 {the maximum size of the breasts when filled up.}
 
 Int Property OptPregChanceHumanoid = 75 Auto Hidden
@@ -268,13 +268,13 @@ Function ResetMod_Values()
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
 	self.OptScaleBellyMax = 4.0
-	self.OptScaleBreastMax = 1.0
+	self.OptScaleBreastMax = 1.5
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
 	self.OptImmersiveNPC = TRUE
 	self.OptDebug = TRUE
-	self.OptUpdateInterval = 10.0
+	self.OptUpdateInterval = 20.0
 	self.OptUpdateDelay = 0.125
 
 	Return
@@ -619,7 +619,7 @@ Function ActorReplaceChestpiece(Actor Who)
 {replace an actor's chestpiece.}
 
 	If(StorageUtil.GetFormValue(Who,"SGO.Actor.Armor.Chest"))
-		Who.EquipItem(Storageutil.GetFormValue(Who,"SGO.Actor.Armor.Chest"),False,True)
+		Who.EquipItem(Storageutil.GetFormValue(Who,"SGO.Actor.Armor.Chest"),FALSE,TRUE)
 		StorageUtil.SetFormValue(who,"SGO.Actor.Armor.Chest",None)
 	EndIf
 EndFunction
@@ -728,6 +728,8 @@ Function BehaviourClear(Actor Who, Bool Full=False)
 EndFunction
 
 Function BehaviourDefault(Actor Who)
+{enforece the default ai behaviour of do nothing.}
+
 	self.BehaviourClear(Who,TRUE)
 
 	If(Who == self.Player)
@@ -909,7 +911,12 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 			Return
 		EndIf
 
-		Dest.AddItem(GemType,1)
+		If(Dest == None)
+			;; place object in the world.
+		Else
+			;; else put it in the bag.
+			Dest.AddItem(GemType,1)
+		EndIf
 
 		x += 1
 	EndWhile
@@ -953,12 +960,23 @@ Int Function ActorGemGetCapacity(Actor Who)
 	Return (self.OptGemMaxCapacity * (self.ActorModGetTotal(Who,"GemCapacity") + 1)) as Int
 EndFunction
 
+Int Function ActorGemGetCount(Actor Who)
+{get how many gems are currently brewing.}
+	
+	Return StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+EndFunction
+
 Float Function ActorGemGetTime(Actor Who)
 {determine how fast gems should be generating for this actor.}
 
 	;; the mod is 0 when empty. if we have a total of 1.5 that means i want
 	;; 150% more time spent to mature the gem.
 	Return self.OptGemMatureTime * (self.ActorModGetTotal(Who,"GemRate") + 1)
+EndFunction
+
+Float Function ActorGemGetPercent(Actor Who)
+
+	Return (self.ActorGemGetWeight(Who,FALSE) / (self.OptGemMaxCapacity * 6)) * 100
 EndFunction
 
 Float Function ActorGemGetWeight(Actor Who, Bool Overflow=FALSE)
@@ -1141,6 +1159,12 @@ Float Function ActorMilkGetTime(Actor Who)
 	Return (self.OptMilkProduceTime * (self.ActorModGetTotal(Who,"MilkRate") + 1))
 EndFunction
 
+Float Function ActorMilkGetPercent(Actor Who)
+{find the current mik percentage of fullness.}
+
+	Return (self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * 100
+EndFunction
+
 Float Function ActorMilkGetWeight(Actor Who)
 {find the current milk weight being carried.}
 
@@ -1229,6 +1253,7 @@ Function ActorActionMilk_Solo(Actor Source)
 	EndIf
 
 	self.BehaviourDefault(Source)
+	self.ActorRemoveChestpiece(Source)
 	self.ImmersiveAnimationMilking(Source)
 
 	While(self.ActorMilkGetWeight(Source) >= 1.0)
@@ -1238,11 +1263,13 @@ Function ActorActionMilk_Solo(Actor Source)
 		self.ImmersiveSoundMoan(Source,FALSE)
 		Utility.Wait(2.0)
 		self.ActorMilkGiveTo(Source,Dest,1)
+		self.ActorBodyUpdate_BreastScale(Source)
 		self.ImmersiveExpression(Source,FALSE)
 	EndWhile
 
 	self.ImmersiveExpression(Source,FALSE)
 	self.ImmersiveAnimationIdle(Source)
+	self.ActorReplaceChestpiece(Source)
 	self.BehaviourClear(Source,TRUE)
 
 	Return
@@ -1418,27 +1445,29 @@ Function MenuMain_Construct(Actor Who)
 
 	Bool ItemBirthEnable = FALSE
 	String ItemBirthLabel = "Not Pregnant"
+	String ItemBirthText = "Induce labour."
 
 	If(self.ActorGemGetWeight(Who) > 0.0)
 		ItemBirthEnable = TRUE
-		ItemBirthLabel = "Gems " + Who.GetDisplayName()
+		ItemBirthLabel = "Gems (" + (self.ActorGemGetCount(Who)) + ", " + (self.ActorGemGetPercent(Who) as Int) + "%)"
 	EndIf
 
 	;;;;;;;;
 
 	Bool ItemMilkEnable = FALSE
 	String ItemMilkLabel = "Not Milkable"
+	String ItemMilkText = "Milk her dry."
 
 	If(self.ActorMilkGetWeight(Who) > 0.0)
 		ItemMilkEnable = TRUE
-		ItemMilkLabel = "Milk " + Who.GetDisplayName()
+		ItemMilkLabel = "Milk (" + (self.ActorMilkGetWeight(Who) as Int) + ", " + (self.ActorMilkGetPercent(Who) as Int) + "%)"
 	EndIf
 
 	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
-	self.MenuWheelSetItem(0,ItemBirthLabel,"Have the target birth their gems.",ItemBirthEnable)
-	self.MenuWheelSetItem(4,ItemMilkLabel,"Milk the current target.",ItemMilkEnable)
+	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
+	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 
 	Return
 EndFunction
@@ -1448,9 +1477,9 @@ Function MenuMain_Handle(Actor Who)
 
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
 
-	If(Result == 0)
+	If(Result == 4)
 		self.ActorActionBirth(Who,Who)
-	ElseIf(Result == 4)
+	ElseIf(Result == 5)
 		self.ActorActionMilk(Who,Who)
 	EndIf
 
