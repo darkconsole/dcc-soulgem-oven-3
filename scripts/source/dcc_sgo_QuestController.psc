@@ -156,6 +156,12 @@ FormList Property dcc_sgo_ListRaceNormal Auto
 FormList Property dcc_sgo_ListRaceVampire Auto
 {form list of vampire races. this list needs to line up with the milk list.}
 
+Package Property dcc_sgo_PackageDoNothing Auto
+{a package to force an actor to do nothing.}
+
+Spell Property dcc_sgo_SpellMenuMain Auto
+{the spell to trigger the main menu.}
+
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptGemMatureTime = 144.0 Auto Hidden
@@ -196,7 +202,7 @@ Bool Property OptImmersiveNPC = TRUE Auto Hidden
 Bool  Property OptDebug = TRUE Auto Hidden
 {print debugging information out to the console}
 
-Float Property OptUpdateInterval = 10.0 Auto Hidden
+Float Property OptUpdateInterval = 20.0 Auto Hidden
 {how long to wait before beginning the calculation queue again.}
 
 Float Property OptUpdateDelay = 0.125 Auto Hidden
@@ -222,8 +228,11 @@ Function ResetMod()
 trigger OnInit() to finish the deal.}
 
 	self.Reset()
+	Utility.Wait(0.25)
 	self.Stop()
+	Utility.Wait(0.25)
 	self.Start()
+
 	Return
 EndFunction
 
@@ -239,6 +248,10 @@ Function ResetMod_Prepare()
 	EndIf
 
 	If(!self.IsSexLabInstalled())
+		Return
+	EndIf
+
+	If(!self.IsPapyrusUtilInstalled())
 		Return
 	EndIf
 
@@ -263,6 +276,15 @@ Function ResetMod_Values()
 	self.OptDebug = TRUE
 	self.OptUpdateInterval = 10.0
 	self.OptUpdateDelay = 0.125
+
+	Return
+EndFunction
+
+Function ResetMod_Spells()
+{force refresh of the spells.}
+
+	self.Player.RemoveSpell(self.dcc_sgo_SpellMenuMain)
+	self.Player.AddSpell(self.dcc_sgo_SpellMenuMain,TRUE)
 
 	Return
 EndFunction
@@ -351,6 +373,22 @@ Bool Function IsSexLabInstalled(Bool Popup=TRUE)
 	Return TRUE
 EndFunction
 
+Bool Function IsPapyrusUtilInstalled(Bool Popup=TRUE)
+{make sure papyrus util is a version we need. if we test this after sexlab we
+can basically promise it will be there. we need to make sure that shlongs of
+skyrim though didn't fuck it up again with an older version, that will break
+the use of AdjustFloatValue and the like.}
+
+	If(PapyrusUtil.GetVersion() < 28)
+		If(Popup)
+			Debug.MessageBox("Your PapyrusUtil is too old or has been overwritten by something like SOS. Install PapyrusUtil 2.8 from Nexus and make sure it dominates the load order.")
+		EndIf
+		Return FALSE
+	EndIf
+
+	Return TRUE
+EndFunction
+
 ;/*****************************************************************************
                           __         
  .-----.--.--.-----.-----|  |_.-----.
@@ -365,6 +403,7 @@ Event OnInit()
 	self.OK = FALSE
 	self.ResetMod_Prepare()
 	self.ResetMod_Values()
+	self.ResetMod_Spells()
 	self.ResetMod_Events()
 
 	self.Print("Mod Installed.")
@@ -566,6 +605,25 @@ is the storageutil name for the data you want.}
 	Return
 EndFunction
 
+Function ActorRemoveChestpiece(Actor who)
+{remove an actor's chestpiece.}
+
+	If(Who.GetWornForm(0x00000004) != None)
+		StorageUtil.SetFormValue(Who,"SGO.Actor.Armor.Chest",Who.GetWornForm(0x00000004))
+		Who.UnequipItemSlot(32)
+		Who.QueueNiNodeUpdate()
+	EndIf
+EndFunction
+
+Function ActorReplaceChestpiece(Actor Who)
+{replace an actor's chestpiece.}
+
+	If(StorageUtil.GetFormValue(Who,"SGO.Actor.Armor.Chest"))
+		Who.EquipItem(Storageutil.GetFormValue(Who,"SGO.Actor.Armor.Chest"),False,True)
+		StorageUtil.SetFormValue(who,"SGO.Actor.Armor.Chest",None)
+	EndIf
+EndFunction
+
 ;/*****************************************************************************
              __                              __                       __       
  .---.-.----|  |_.-----.----.   .--.--.---.-|  |   .--------.-----.--|  .-----.
@@ -622,6 +680,62 @@ Function ActorModUnsetValue(Actor Who, String What, String ModKey)
 
 	StorageUtil.StringListRemove(Who,What,ModKey,TRUE)
 	StorageUtil.UnsetFloatValue(Who,ModKey)
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+             __                                   __              __ 
+ .---.-.----|  |_.-----.----.   .----.-----.-----|  |_.----.-----|  |
+ |  _  |  __|   _|  _  |   _|   |  __|  _  |     |   _|   _|  _  |  |
+ |___._|____|____|_____|__|     |____|_____|__|__|____|__| |_____|__|
+
+*****************************************************************************/;
+
+Function BehaviourApply(Actor Who, Package Pkg)
+{have an actor begin a specific package.}
+
+	self.BehaviourClear(Who)
+
+	StorageUtil.SetFormValue(Who,"SGO.Actor.Package",Pkg)
+	ActorUtil.AddPackageOverride(Who,Pkg,100)
+	Who.EvaluatePackage()
+
+	Return
+EndFunction
+
+Function BehaviourClear(Actor Who, Bool Full=False)
+{have an actor clear their ruling overwrite package.}
+
+	Package Pkg = StorageUtil.GetFormValue(Who,"SGO.Actor.Package",missing=None) as Package
+
+	If(Pkg != None)
+		StorageUtil.UnsetFormValue(Who,"SGO.Actor.Package")
+		ActorUtil.RemovePackageOverride(Who,Pkg)
+		Who.EvaluatePackage()
+	EndIf
+
+	If(Full)
+		ActorUtil.RemovePackageOverride(Who,self.dcc_sgo_PackageDoNothing)
+		who.EvaluatePackage()
+
+		If(Who == self.Player)
+			Game.SetPlayerAIDriven(FALSE)
+		EndIf
+	EndIf
+
+	Return
+EndFunction
+
+Function BehaviourDefault(Actor Who)
+	self.BehaviourClear(Who,TRUE)
+
+	If(Who == self.Player)
+		Game.SetPlayerAIDriven(TRUE)
+	EndIf
+
+	ActorUtil.AddPackageOverride(Who,self.dcc_sgo_PackageDoNothing,99)
+	Who.EvaluatePackage()
 
 	Return
 EndFunction
@@ -917,7 +1031,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 			Progress[6] = Progress[6] + 1
 		EndIf
 
-		If(Before as Int != Gem as Int)
+		If(Before as Int < Gem as Int)
 			;; if the gem reached the next stage then mark it down
 			;; so we can emit an event listing the progression.
 			Progressed = TRUE
@@ -932,11 +1046,11 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;;;;;;;;
 
 	If(Progressed)
-		self.ImmersiveGemProgress(Who)
+		self.Immersive_OnGemProgress(Who)
 		self.EventSendGemProgress(Who,Progress)
 	Else
 		If(Progress[6] >= self.ActorModGetTotal(Who,"GemCapacity"))
-			self.ImmersiveGemFull(Who)
+			self.Immersive_OnGemFull(Who)
 		EndIf
 	EndIf
 	
@@ -968,8 +1082,15 @@ same.}
 			Return
 		EndIf
 
-		Dest.AddItem(MilkType,1)
-		
+		If(Dest == None)
+			;; without a destination drop the milk the ground.
+			ObjectReference o = Source.DropObject(MilkType,1)
+			o.SetActorOwner(self.Player.GetActorBase())
+		Else
+			;; else put it in their bag.
+			Dest.AddItem(MilkType,1)
+		EndIf
+
 		x += 1
 	EndWhile
 
@@ -1050,7 +1171,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	Milk += (Time / self.ActorMilkGetTime(Who))
 	If(Milk > Capacity)
-		self.ImmersiveMilkFull(Who)
+		self.Immersive_OnMilkFull(Who)
 		Milk = Capacity
 	EndIf
 
@@ -1060,8 +1181,8 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;;;;;;;;
 	;;;;;;;;
 
-	If(Before as Int != Milk as Int)
-		self.ImmersiveMilkProgress(Who)
+	If(Before as Int < Milk as Int)
+		self.Immersive_OnMilkProgress(Who)
 		self.EventSendMilkProgress(Who,(Milk as Int))
 	EndIf
 
@@ -1069,6 +1190,69 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	Return
 EndFunction
 
+;/*****************************************************************************
+             __                             __   __                   
+ .---.-.----|  |_.-----.----.   .---.-.----|  |_|__.-----.-----.-----.
+ |  _  |  __|   _|  _  |   _|   |  _  |  __|   _|  |  _  |     |__ --|
+ |___._|____|____|_____|__|     |___._|____|____|__|_____|__|__|_____|
+
+*****************************************************************************/;
+
+Function ActorActionBirth(Actor Source, Actor Dest)
+
+	Return
+EndFunction
+
+Function ActorActionMilk(Actor Source, Actor Dest)
+{perform the full milking sequence.}
+
+	If(self.ActorMilkGetWeight(Source) < 1.0)
+		self.Print(Source.GetDisplayName() + " is not ready to be milked.")
+		Return
+	EndIf
+
+	If(Source == Dest)
+		self.ActorActionMilk_Solo(Source)
+	Else
+		self.ActorActionMilk_Duo(Source,Dest)
+	EndIf
+
+	Return
+EndFunction
+
+Function ActorActionMilk_Solo(Actor Source)
+{single actor milking sequence.}
+
+	Actor Dest = None
+	If(Source == self.Player)
+		Dest = self.Player
+	EndIf
+
+	self.BehaviourDefault(Source)
+	self.ImmersiveAnimationMilking(Source)
+
+	While(self.ActorMilkGetWeight(Source) >= 1.0)
+		self.ImmersiveBlush(Source)
+		Utility.Wait(2.0)
+		self.ImmersiveExpression(Source,TRUE)
+		self.ImmersiveSoundMoan(Source,FALSE)
+		Utility.Wait(2.0)
+		self.ActorMilkGiveTo(Source,Dest,1)
+		self.ImmersiveExpression(Source,FALSE)
+	EndWhile
+
+	self.ImmersiveExpression(Source,FALSE)
+	self.ImmersiveAnimationIdle(Source)
+	self.BehaviourClear(Source,TRUE)
+
+	Return
+EndFunction
+
+Function ActorActionMilk_Duo(Actor Source, Actor Dest)
+{dual actor milking sequence.}
+
+	Return
+EndFunction
 
 ;/*****************************************************************************
   __                                    __               __     __   
@@ -1078,26 +1262,198 @@ EndFunction
                                                                      
 *****************************************************************************/;
 
-Function ImmersiveGemFull(Actor Who)
+;; immersive events
+
+Function Immersive_OnGemFull(Actor Who)
 {send messages about gem fullness.}
 
 	Return
 EndFunction
 
-Function ImmersiveGemProgress(Actor Who)
+Function Immersive_OnGemProgress(Actor Who)
 {send messages about gem progression.}
 
 	Return
 EndFunction
 
-Function ImmersiveMilkFull(Actor Who)
+Function Immersive_OnMilkFull(Actor Who)
 {send messages about milk being full.}
 
 	Return
 EndFunction
 
-Function ImmersiveMilkProgress(Actor Who)
+Function Immersive_OnMilkProgress(Actor Who)
 {send messages about milk progression.}
 
 	Return
 EndFunction
+
+;; immersive actions
+
+Function ImmersiveBlush(Actor Who, Float Opacity=1.0, Int FullTime=2, Float FadeTime=2.0)
+{provide integration for Blush When Aroused. this will trigger a short blushing
+event if installed http://www.loverslab.com/files/file/1724-blush-when-aroused}
+
+	int e = 0
+
+	If(Who != self.Player)
+		e = ModEvent.Create("BWA_ForceBlushOn")
+	Else
+		e = ModEvent.Create("BWA_ForceBlushOnPlr")
+	Endif
+
+	If(e == 0)
+		self.PrintDebug("Blush Event Failure")
+		Return
+	EndIf
+
+	If(Who != self.Player)
+		ModEvent.PushForm(e,Who as Form)
+	EndIf
+
+	ModEvent.PushFloat(e,Opacity)
+	ModEvent.PushInt(e,FullTime)
+	ModEvent.PushFloat(e,FadeTime)
+	ModEvent.PushBool(e,FALSE)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function ImmersiveExpression(Actor Who, Bool Enable)
+{play an expression on the actor face.}
+
+	If(Enable)
+		sslBaseExpression exp = SexLab.PickExpression(Who)
+		exp.Apply(Who,100,1)
+	Else
+		Who.ClearExpressionOverride()
+		MfgConsoleFunc.ResetPhonemeModifier(Who)
+	EndIf
+EndFunction
+
+Function ImmersiveSoundMoan(Actor Who, Bool Hard=FALSE)
+{play a moaning sound from the actor.}
+
+	sslBaseVoice Voice = SexLab.PickVoice(Who)
+	Int SoundID = StorageUtil.GetIntValue(Who,"SGO.Actor.Sound.Moan")
+	Sound Moan
+
+	If(Hard)
+		Moan = Voice.GetSound(100)
+	Else
+		Moan = Voice.GetSound(30)
+	EndIf
+
+	if SoundID > 0
+		Sound.StopInstance(SoundID)
+	Endif
+
+	StorageUtil.SetIntValue(Who,"SGO.Actor.Sound.Moan",Moan.Play(who))
+EndFunction
+
+Function ImmersiveAnimationBirthing(Actor Who)
+{play a birthing animation on the actor.}
+
+	Debug.SendAnimationEvent(who,"Missionary_A1_S4")
+	;;Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
+	Return
+EndFunction
+
+Function ImmersiveAnimationIdle(Actor Who)
+{play the idle animation on an actor.}
+
+	Debug.SendAnimationEvent(who,"IdleForceDefaultState")
+	;;Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
+	Return
+EndFunction
+
+Function ImmersiveAnimationMilking(Actor Who)
+{play the milking animation on an actor.} 
+
+	Debug.SendAnimationEvent(Who,"ZaZAPCHorFC")
+	Return
+EndFunction
+
+;/*****************************************************************************
+                                             __ 
+ .--------.-----.-----.--.--.   .---.-.-----|__|
+ |        |  -__|     |  |  |   |  _  |  _  |  |
+ |__|__|__|_____|__|__|_____|   |___._|   __|__|
+                                      |__|      
+
+*****************************************************************************/;
+
+;; ui extension utility.
+
+Function MenuWheelSetItem(Int num, String text, String tip, Bool enabled=True)
+{assign an item to the uiextensions wheel menu.}
+
+	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionLabelText",num,text)
+	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionText",num,tip)
+	UIExtensions.SetMenuPropertyIndexBool("UIWheelMenu","optionEnabled",num,enabled)
+	Return
+EndFunction
+
+;; mod menus.
+
+Function MenuMain()
+{show the main soulgem oven menu.}
+
+	Actor Who = Game.GetCurrentCrosshairRef() as Actor
+	Int Result
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+	
+	self.MenuMain_Construct(Who)
+	self.MenuMain_Handle(Who)
+	Return
+EndFunction
+
+Function MenuMain_Construct(Actor Who)
+{construct the menu for the main sgo menu.}
+
+	;;;;;;;;
+
+	Bool ItemBirthEnable = FALSE
+	String ItemBirthLabel = "Not Pregnant"
+
+	If(self.ActorGemGetWeight(Who) > 0.0)
+		ItemBirthEnable = TRUE
+		ItemBirthLabel = "Gems " + Who.GetDisplayName()
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemMilkEnable = FALSE
+	String ItemMilkLabel = "Not Milkable"
+
+	If(self.ActorMilkGetWeight(Who) > 0.0)
+		ItemMilkEnable = TRUE
+		ItemMilkLabel = "Milk " + Who.GetDisplayName()
+	EndIf
+
+	;;;;;;;;
+
+	UIExtensions.InitMenu("UIWheelMenu")
+	self.MenuWheelSetItem(0,ItemBirthLabel,"Have the target birth their gems.",ItemBirthEnable)
+	self.MenuWheelSetItem(4,ItemMilkLabel,"Milk the current target.",ItemMilkEnable)
+
+	Return
+EndFunction
+
+Function MenuMain_Handle(Actor Who)
+{handle the choice from the sgo menu.}
+
+	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+
+	If(Result == 0)
+		self.ActorActionBirth(Who,Who)
+	ElseIf(Result == 4)
+		self.ActorActionMilk(Who,Who)
+	EndIf
+
+	Return
+EndFunction
+
