@@ -147,6 +147,15 @@ Perk Property dcc_sgo_PerkCannotInseminate Auto
 Perk Property dcc_sgo_PerkCanInseminate Auto
 {allow an actor to inseminate others if it normally could not.}
 
+FormList Property dcc_sgo_ListMilkItems Auto
+{form list of milks. this list needs to line up with the two race lists.}
+
+FormList Property dcc_sgo_ListRaceNormal Auto
+{form list of normal races. this list needs to line up with the milk list.}
+
+FormList Property dcc_sgo_ListRaceVampire Auto
+{form list of vampire races. this list needs to line up with the milk list.}
+
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptGemMatureTime = 144.0 Auto Hidden
@@ -775,13 +784,21 @@ Function ActorGemGiveTo(Actor Source, Actor Dest, Int Count=1)
 can be the same. this will mainly be used for a lulz transfer animation if
 i can find a lesbian one that is suitable or get an animator to make me one.}
 
-	Form GemType = self.ActorGemRemove(Source)
-	If(GemType == None)
-		self.Print(Source.GetDisplayName() + " has no more gems to give.")
-		Return
-	EndIf
+	Int x
+	Form GemType
 
-	Dest.AddItem(GemType,1)
+	x = 0
+	While(x < Count)
+		GemType = self.ActorGemRemove(Source)
+		If(GemType == None)
+			self.Print(Source.GetDisplayName() + " has no more gems to give.")
+			Return
+		EndIf
+
+		Dest.AddItem(GemType,1)
+
+		x += 1
+	EndWhile
 	Return
 EndFunction
 
@@ -937,13 +954,54 @@ EndFunction
 *****************************************************************************/;
 
 Function ActorMilkGiveTo(Actor Source, Actor Dest, Int Count=1)
+{transfer a bottle of milk from one actor to another. both actors can be the
+same.}
+
+	Form MilkType
+	Int x
+
+	x = 0
+	While(x < Count)
+		MilkType = self.ActorMilkRemove(Source)
+		If(MilkType == None)
+			self.Print(Source.GetDisplayName() + " is not ready to give milk.");
+			Return
+		EndIf
+
+		Dest.AddItem(MilkType,1)
+		
+		x += 1
+	EndWhile
 
 	Return
 EndFunction
 
-Function ActorMilkRemove(Actor Who)
+Form Function ActorMilkRemove(Actor Who)
+{remove a bottle of milk from the specified actor. returns a form describing
+the type of milk that we should spawn in the world.}
 
-	Return
+	If(self.ActorMilkGetWeight(Who) < 1.0)
+		Return None
+	EndIf
+
+	Int Index
+
+	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Data.Milk",-1.0)
+
+	;; give a milk for normal races.
+	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
+	EndIf
+
+	;; give a milk for vampire races that match normal races.
+	Index = self.dcc_sgo_ListRaceVampire.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
+	EndIf
+
+	;; give the generic milk that sucks.
+	Return self.dcc_sgo_ListRaceNormal.GetAt(0)
 EndFunction
 
 ;;;;;;;;
