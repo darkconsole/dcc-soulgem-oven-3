@@ -9,13 +9,14 @@ Scriptname dcc_sgo_QuestController extends Quest
  |:  1   |              |_____|                  |:  1   |                  
  |::.. . |                                       |::.. . |                  
  `-------'                                       `-------'                  
-        _______ __              _______ __    __         __                 
-       |       |  |--.-----.   |       |  |--|__.----.--|  |                
-       |.|   | |     |  -__|   |.|   | |     |  |   _|  _  |                
-       `-|.  |-|__|__|_____|   `-|.  |-|__|__|__|__| |_____|                
-         |:  |                   |:  |                                      
-         |::.|                   |::.|                                      
-         `---'                   `---'                                      
+     __   __              _______ __    __         __                       
+    |  |_|  |--.-----.   |       |  |--|__.----.--|  |                      
+    |   _|     |  -__|   |.|   | |     |  |   _|  _  |                      
+    |____|__|__|_____|   `-|.  |-|__|__|__|__| |_____|                      
+                           |:  |                                            
+                           |::.|                                            
+                           `---'                                            
+
 *****************************************************************************/;
 
 ;; >
@@ -132,15 +133,6 @@ SexLabFramework Property SexLab Auto Hidden
 
 ;; vanilla forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Soulgem[] Property SoulgemEmpty Auto
-{objects we will hand out if empty birth is selected. 6 el array filled in ck.}
-
-Soulgem[] Property SoulgemFull Auto
-{objects we will hand out if full birth is selected. 6 el array filled in ck.}
-
-MiscObject[] Property SoulgemFragment Auto
-{what we will hand out if a gem isn't yet mature enough for petty.}
-
 ;; mod forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Perk Property dcc_sgo_PerkCannotProduceGems Auto
@@ -172,6 +164,15 @@ FormList Property dcc_sgo_ListRaceNormal Auto
 
 FormList Property dcc_sgo_ListRaceVampire Auto
 {form list of vampire races. this list needs to line up with the milk list.}
+
+FormList Property dcc_sgo_ListGemEmpty Auto
+{form list of full gems.}
+
+FormList Property dcc_sgo_ListGemFull Auto
+{form list of empty gems.}
+
+FormList Property dcc_sgo_ListGemFragment Auto
+{form list of gem fragments.}
 
 Package Property dcc_sgo_PackageDoNothing Auto
 {a package to force an actor to do nothing.}
@@ -222,6 +223,12 @@ Bool Property OptImmersivePlayer = TRUE Auto Hidden
 
 Bool Property OptImmersiveNPC = TRUE Auto Hidden
 {if we should show messages about npc states.}
+
+Float Property OptProgressAlchFactor = 1.0 Auto Hidden
+{how fast alchemy should level by milking.}
+
+Float Property OptProgressEnchFactor = 1.0 Auto Hidden
+{how fast enchanting should level by birthing.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -298,6 +305,8 @@ Function ResetMod_Values()
 	self.OptScaleBellyMax = 4.0
 	self.OptScaleBreastMax = 1.5
 	self.OptScaleTesticleMax = 1.0
+	self.OptProgressEnchFactor = 1.0
+	self.OptProgressAlchFactor = 1.0
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
@@ -380,7 +389,45 @@ String Function GetGemName(Float Value)
 	Else
 		Return "Black"
 	EndIf
+EndFunction
 
+Int Function GetGemValue(Form What)
+{get the value of a gem, which also equals its formlist offset plus one.}
+
+	FormList List
+	Int Value
+
+	If(self.OptGemFilled)
+		List = self.dcc_sgo_ListGemFull
+	Else
+		List = self.dcc_sgo_ListGemEmpty
+	EndIf
+
+	Value = List.Find(What)
+	If(Value == -1)
+		Return 0
+	EndIf
+
+	Return (Value + 1)
+EndFunction
+
+Float Function GetLeveledValue(Float level, Float value, Float factor = 1.0)
+{modify a value based on a level 100 system. this means at level 100 the input
+value will be doubled.}
+	
+	;; scale 1 at level 0
+	;; ((0 / 100) * 1) + 1 = 1
+
+	;; scale 1 at level 1
+	;; ((1 / 100) * 1) + 1 = 1.01
+
+	;; scale 1 at level 50
+	;; ((50 / 100) * 1) + 1 = 1.5
+
+	;; scale 1 at level 100
+	;; ((100 / 100) * 1) + 1 = 2.0
+
+	Return (((level / 100.0) * (value * factor)) + value) as Float
 EndFunction
 
 ;/*****************************************************************************
@@ -748,6 +795,68 @@ Function ActorReplaceChestpiece(Actor Who)
 	EndIf
 EndFunction
 
+Function ActorProgressAlchemy(Actor Who, Float ItemValue=1.0)
+{progress the alchemy skill for the specified actor. for most things we will
+leave ItemValue at the default of 1.0.}
+
+	If(Who != self.Player)
+		;; not possible to level npcs at this time.
+		Return
+	EndIf
+
+	If(self.OptProgressAlchFactor == 0.0)
+		;; do not process when disabled.
+		Return
+	EndIf
+
+	;; http://www.uesp.net/wiki/Skyrim:Leveling#Skill_XP
+
+	;; xp/btl gained at x btl/day at level 0.
+	;; double this at level 100 with 1.0 progress factor.
+	;; 1 = 100xp
+	;; 2 = 50xp
+	;; 3 = 33xp (default)
+
+	Float Level = Who.GetLevel()
+	Float Value = (100 / (24 / self.OptMilkProduceTime)) * ItemValue
+
+	;; if its progressing retarded fast, manipulate the 24 to be smaller.
+	;; if too slow manipulate the 24 larger.
+	;; once this calc feels good to me at default, users can tweak it via the factor.
+
+	Game.AdvanceSkill("Alchemy",self.GetLeveledValue(Level,Value,self.OptProgressAlchFactor))
+	Return
+EndFunction
+
+Function ActorProgressEnchanting(Actor Who, Float ItemValue=6.0)
+{progress the enchanting skill for the specified actor. it works on a base 6
+system because it will primarily be used on soulgems birthing.}
+
+	If(Who != self.Player)
+		;; not possible to level npcs at this time.
+		Return
+	EndIf
+
+	If(self.OptProgressEnchFactor == 0.0)
+		;; do not process when disabled.
+		Return
+	EndIf
+
+	;; http://www.uesp.net/wiki/Skyrim:Leveling#Skill_XP
+	;; normal enchanting works as 1xp per item enchanted and it seems enchanting levels fast
+	;; so we will use small numbers here.
+
+	Float Level = Who.GetLevel()
+	Float Value = ((ItemValue / 6.0) / 2.0)
+
+	;; if enchanting levels too slow manipulate the /2.0 smaller.
+	;; if too fast, manipulate the /2.0 larger.
+	;; once this calc feels good to me at default, users can tweak it via the factor.
+
+	Game.AdvanceSkill("Enchanting",self.GetLeveledValue(Level,Value,self.OptProgressEnchFactor))
+	Return
+EndFunction
+
 ;/*****************************************************************************
              __                              __                       __       
  .---.-.----|  |_.-----.----.   .--.--.---.-|  |   .--------.-----.--|  .-----.
@@ -1071,10 +1180,12 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 			Return
 		EndIf
 
+		self.ActorProgressEnchanting(Source,self.GetGemValue(GemType))
+
 		If(Dest == None)
 			;; without a destination drop the gem the ground.
 			ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
-			o.MoveToNode(Source,"Vagina")
+			o.MoveToNode(Source,"NPC Pelvis")
 			o.SetActorOwner(self.Player.GetActorBase())
 			o.Enable()
 			Utility.Wait(0.1)
@@ -1098,22 +1209,25 @@ gem place and gem give functions.}
 	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",0)
 	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
 
-	;;If(Value == 0.0)
-	;;	Return None
-	;;EndIf
+	If(self.ActorGemGetCount(Who) == 0)
+		;; an empty form if no gems.
+		Return None
+	EndIf
 
 	If(Value < 1.0)
-		Return self.SoulgemFragment[Utility.RandomInt(0,(self.SoulgemFragment.Length - 1))] as Form
+		;; return a random fragment if less than a gem.
+		Return self.dcc_sgo_ListGemFragment.GetAt(Utility.RandomInt(0,(self.dcc_sgo_ListGemFragment.GetSize() - 1))) as Form
 	EndIf
 
 	If(Value > 6.0)
+		;; cap the value for overtimed gems.
 		Value = 6
 	EndIf
 
 	If(self.OptGemFilled)
-		Return self.SoulgemFull[((Value as Int) - 1)]
+		Return self.dcc_sgo_ListGemFull.GetAt(Value as Int - 1)
 	Else
-		Return self.SoulgemEmpty[((Value as Int) - 1)]
+		Return self.dcc_sgo_ListGemEmpty.GetAt(Value as Int - 1)
 	EndIf
 EndFunction
 
@@ -1128,24 +1242,24 @@ actual gems it will prefer unfilled over filled.}
 		;; handle the removal of various fragments.
 
 		x = 0
-		While(x < self.SoulgemFragment.Length)
-			If(Who.GetItemCount(self.SoulgemFragment[x]) > 0)
-				Who.RemoveItem(self.SoulgemFragment[x],1,FALSE)
-				Return self.SoulgemFragment[x]
+		While(x < self.dcc_sgo_ListGemFragment.GetSize())
+			If(Who.GetItemCount(self.dcc_sgo_ListGemFragment.GetAt(x)) > 0)
+				Who.RemoveItem(self.dcc_sgo_ListGemFragment.GetAt(x),1,FALSE)
+				Return self.dcc_sgo_ListGemFragment.GetAt(x)
 			EndIf
 			x += 1
 		EndWhile
 	Else
 		;; handle the removal of gems. prefer unfilled first.
 
-		If(Who.GetItemCount(self.SoulgemEmpty[(Size - 1)]) > 0)
-			Who.RemoveItem(self.SoulgemEmpty[(Size - 1)],1,FALSE)
-			Return self.SoulgemEmpty[Size]
+		If(Who.GetItemCount(self.dcc_sgo_ListGemEmpty.GetAt(Size - 1)) > 0)
+			Who.RemoveItem(self.dcc_sgo_ListGemEmpty.GetAt(Size - 1),1,FALSE)
+			Return self.dcc_sgo_ListGemEmpty.GetAt(Size - 1)
 		EndIf
 
-		If(Who.GetItemCount(self.SoulgemFull[(Size - 1)]) > 0)
-			Who.RemoveItem(self.SoulgemFull[(Size - 1)],1,FALSE)
-			Return self.SoulgemFull[Size]
+		If(Who.GetItemCount(self.dcc_sgo_ListGemFull.GetAt(Size - 1)) > 0)
+			Who.RemoveItem(self.dcc_sgo_ListGemFull.GetAt(Size - 1),1,FALSE)
+			Return self.dcc_sgo_ListGemFull.GetAt(Size - 1)
 		EndIf
 	EndIf
 
@@ -1194,8 +1308,8 @@ Int Function ActorGemGetInventory_GetFragments(Actor Who)
 	Int Count = 0
 	Int x = 0
 
-	While(x < self.SoulgemFragment.Length)
-		Count += Who.GetItemCount(self.SoulgemFragment[x])
+	While(x < self.dcc_sgo_ListGemFragment.GetSize())
+		Count += Who.GetItemCount(self.dcc_sgo_ListGemFragment.GetAt(x))
 		x += 1
 	EndWhile
 
@@ -1205,8 +1319,8 @@ EndFunction
 Int Function ActorGemGetInventory_GetGems(Actor Who, Int Offset)
 {how many of a specific gem offset we have?}
 
-	Int Count = Who.GetItemCount(self.SoulgemEmpty[Offset])
-	Count += Who.GetItemCount(self.SoulgemFull[Offset])
+	Int Count = Who.GetItemCount(self.dcc_sgo_ListGemEmpty.GetAt(Offset))
+	Count += Who.GetItemCount(self.dcc_sgo_ListGemFull.GetAt(Offset))
 
 	Return Count
 EndFunction
@@ -1356,6 +1470,8 @@ same.}
 			Return
 		EndIf
 
+		self.ActorProgressAlchemy(Source)
+
 		If(Dest == None)
 			;; without a destination drop the milk the ground.
 			ObjectReference o = Source.PlaceAtMe(MilkType,1,FALSE,TRUE)
@@ -1503,6 +1619,8 @@ same.}
 			self.Print(Source.GetDisplayName() + " is not ready to give semen.");
 			Return
 		EndIf
+
+		self.ActorProgressAlchemy(Source,0.75)
 
 		If(Dest == None)
 			;; without a destination drop the semen on the ground from the
@@ -1674,7 +1792,10 @@ Function ActorActionBirth_Solo(Actor Source)
 	self.ActorRemoveChestpiece(Source)
 	self.ImmersiveAnimationBirthing(Source)
 	self.ImmersiveAboutFace(Source)
-	MiscUtil.SetFreeCameraState(TRUE,6.0)
+
+	If(Source == self.Player)
+		MiscUtil.SetFreeCameraState(TRUE,7.0)
+	EndIf
 
 	While(self.ActorGemGetCount(Source) > 0)
 		Utility.Wait(3.0)
@@ -1690,7 +1811,10 @@ Function ActorActionBirth_Solo(Actor Source)
 		Utility.Wait(3.0)
 	EndWhile
 
-	MiscUtil.SetFreeCameraState(FALSE)
+	If(Source == self.Player)
+		MiscUtil.SetFreeCameraState(FALSE)
+	EndIf
+
 	self.ImmersiveExpression(Source,FALSE)
 	self.ImmersiveAboutFace(Source)
 	self.ImmersiveAnimationIdle(Source)
@@ -2228,6 +2352,12 @@ Function MenuSoulgemInsert_Handle(Actor Who)
 	Else
 		;; do nothing, cancel.
 	EndIf
+
+	Return
+EndFunction
+
+Function MenuActorOptions(Actor Who)
+{show the biological feature toggle menu}
 
 	Return
 EndFunction
