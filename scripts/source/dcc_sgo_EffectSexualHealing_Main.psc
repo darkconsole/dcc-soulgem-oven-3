@@ -1,4 +1,4 @@
-Scriptname dcc_sgo_EffectMilk_Generic extends ActiveMagicEffect
+Scriptname dcc_sgo_EffectSexualHealing_Main extends ActiveMagicEffect
 
 Event OnEffectStart(Actor Who, Actor From)
 {restore 20% of the actors basic values when drinking this potion.}

@@ -31,6 +31,7 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Float    SGO.Actor.Time.Gem - the last time this actor's gem data updated.
 ;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
+;; Float    SGO.Actor.Time.Semen - the last time this actor was wanked.
 ;; Float[]  SGO.Actor.Data.Gem - the gem data for this actor.
 ;; Float    SGO.Actor.Data.Milk - the milk data for this actor.
 ;; String[] SGO.Actor.Mod.ScaleBelly
@@ -150,6 +151,9 @@ Perk Property dcc_sgo_PerkCanInseminate Auto
 FormList Property dcc_sgo_ListMilkItems Auto
 {form list of milks. this list needs to line up with the two race lists.}
 
+FormList Property dcc_sgo_ListSemenItems Auto
+{form list of semens. it needs to line up with the race lists.}
+
 FormList Property dcc_sgo_ListRaceNormal Auto
 {form list of normal races. this list needs to line up with the milk list.}
 
@@ -179,11 +183,20 @@ Float Property OptMilkProduceTime = 8.0 Auto Hidden
 Int Property OptMilkMaxCapacity = 3 Auto Hidden
 {how many bottles of milk can be carried at one time.}
 
+Float Property OptSemenProduceTime = 12.0 Auto Hidden
+{how many hours for semen to produce.}
+
+Int Property OptSemenMaxCapacity = 2 Auto Hidden
+{how many bottles of semen can be carried at a time.}
+
 Float Property OptScaleBellyMax = 4.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
 Float Property OptScaleBreastMax = 1.5 Auto Hidden
 {the maximum size of the breasts when filled up.}
+
+Float Property OptScaleTesticleMax = 1.0 Auto Hidden
+{the maximum size of the testicles when filled up.}
 
 Int Property OptPregChanceHumanoid = 75 Auto Hidden
 {preg chance on encounters with people.}
@@ -267,8 +280,11 @@ Function ResetMod_Values()
 	self.OptGemFilled = TRUE
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
+	self.OptSemenProduceTime = 12.0
+	self.OptSemenMaxCapacity = 2
 	self.OptScaleBellyMax = 4.0
 	self.OptScaleBreastMax = 1.5
+	self.OptScaleTesticleMax = 1.0
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
@@ -545,6 +561,19 @@ Function EventSendMilkProgress(Actor Who, Int Progress)
 	Return
 EndFunction
 
+Function EventSendSemenProgress(Actor Who, Int Progress)
+
+	Int e = ModEvent.Create("SGO.OnSemenProgress")
+
+	If(e)
+		ModEvent.PushForm(e,Who)
+		ModEvent.PushInt(e,Progress)
+		ModEvent.Send(e)
+	EndIf
+
+	Return
+EndFunction
+
 ;/*****************************************************************************
              __                     __       __         
  .---.-.----|  |_.-----.----.   .--|  .---.-|  |_.---.-.
@@ -603,9 +632,17 @@ you must do each function individually.}
 	If(Enable)
 		Who.RemovePerk(ToDisable)
 		Who.AddPerk(ToEnable)
+
+		If(Func == self.BioInseminate)
+			self.ActorTrackForSemen(Who,TRUE)
+		EndIf
 	Else
 		Who.RemovePerk(ToEnable)
 		Who.AddPerk(ToDisable)
+
+		If(Func == self.BioInseminate)
+			self.ActorTrackForSemen(Who,FALSE)
+		EndIf
 	EndIf
 
 	Return
@@ -633,7 +670,11 @@ been updated. the string value is the storageutil name for the data you want.}
 
 	If(Last == 0.0)
 		StorageUtil.SetFloatValue(Who,What,Current)
-		Last = Current
+
+		;;If(What != "SGO.Actor.Time.Semen")
+			;; we want male actors to have full sacks to start iwht.
+			Last = Current
+		;;EndIf
 	EndIf
 
 	Return (Current - Last) * 24.0
@@ -815,11 +856,25 @@ Function ActorTrackForMilk(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating milk.}
 
 	If(Enabled)
-		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,False)
+		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,FALSE)
 	Else
-		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,True)
+		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,TRUE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Milk")
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Milk")
+	EndIf
+
+	Return
+EndFunction
+
+Function ActorTrackForSemen(Actor Who, Bool Enabled)
+{place or remove an actor from the list tracking actors generating semen.}
+
+	If(Enabled)
+		StorageUtil.FormListAdd(None,"SGO.ActorList.Semen",Who,FALSE)
+	Else
+		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,FALSE)
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Semen")
+		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Semen")
 	EndIf
 
 	Return
@@ -840,32 +895,20 @@ witht he NiO stuffs.}
 
 	self.ActorBodyUpdate_BellyScale(Who)
 	self.ActorBodyUpdate_BreastScale(Who)
+	self.ActorBodyUpdate_TesticleScale(Who)
 	Return
 EndFunction
 
 Function ActorBodyUpdate_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
-	Float Belly = 1.0 + self.ActorModGetTotal(Who,"ScaleBelly")
+	Float Belly = self.ActorModGetTotal(Who,"ScaleBelly")
 	Bool Female = (Who.GetActorBase().GetSex() == 1)
 
 	;;;;;;;;;;;;;;;;
 	;;;;;;;;;;;;;;;;
 
-	Int x = 0
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
-	Float Weight = 0.0
-	Float Current
-
-	While(x < Count)
-		Current = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
-		If(Current > 6.0)
-			Current = 6.0
-		EndIf
-
-		Weight += Current
-		x += 1
-	EndWhile
 
 	;; with a max of six gems, max of 300% more visual
 	;; depending on how the visual results look we may want to curve this value.
@@ -873,7 +916,7 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
-	Belly = ((Weight / (6 * self.OptGemMaxCapacity)) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
+	Belly = ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.OptGemMaxCapacity)) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
 	self.PrintDebug(Who.GetDisplayName() + " Belly Scale " + Belly)
 
 	;;;;;;;;;;;;;;;;
@@ -892,7 +935,7 @@ EndFunction
 Function ActorBodyUpdate_BreastScale(Actor Who)
 {handle the physical representation of the breasts.}
 	
-	Float Breast = 1.0 + self.ActorModGetTotal(Who,"ScaleBreast")
+	Float Breast = self.ActorModGetTotal(Who,"ScaleBreast")
 	Bool Female = (Who.GetActorBase().GetSex() == 1)
 
 	;;;;;;;;;;;;;;;;
@@ -902,7 +945,7 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
-	Breast = ((StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Milk") / self.OptMilkMaxCapacity) * (self.OptScaleBreastMax + self.ActorModGetTotal(Who,"ScaleBreastMax"))) + 1
+	Breast += ((self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * (self.OptScaleBreastMax + self.ActorModGetTotal(Who,"ScaleBreastMax"))) + 1
 	self.PrintDebug(Who.GetDisplayName() + " Breast Scale " + Breast)
 
 	;;;;;;;;;;;;;;;;
@@ -918,6 +961,35 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 
 	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC L Breast")
 	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC R Breast")
+	Return
+EndFunction
+
+Function ActorBodyUpdate_TesticleScale(Actor Who)
+{handle the physical representation of the breasts.}
+	
+	Float Testicle = self.ActorModGetTotal(Who,"ScaleTesticle")
+	Bool Female = (Who.GetActorBase().GetSex() == 1)
+
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
+
+	;; with a max of 2 bottles, max of 200% more visual
+	;; 0 semen ((0 / 2) * 2.0) + 1 == 1.0
+	;; 2 semen ((2 / 2) * 2.0) + 1 == 3.0
+
+	Testicle += ((self.ActorSemenGetWeight(Who) / self.OptSemenMaxCapacity) * (self.OptScaleTesticleMax + self.ActorModGetTotal(Who,"ScaleTesticleMax"))) + 1
+	self.PrintDebug(Who.GetDisplayName() + " Testicle Scale " + Testicle)
+
+	;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;
+
+	If(Testicle == 1.0)
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]","SGO.Scale")
+	Else
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]","SGO.Scale",Testicle)
+	EndIf
+
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]")
 	Return
 EndFunction
 
@@ -1058,10 +1130,16 @@ that is a snapshot of the current gem states, and that snapshot will be emitted
 in a mod event if a gem reached the next stage. this is probably the heaviest
 function in this mod, as data is flying in and out of papyrusutil constantly.}
 
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
+
+	If(Math.LogicalAnd(Bio,self.BioProduceGems) == 0)
+		;; no need to recalculate someone who cant inseminate.
+		Return
+	EndIf
+
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
-		self.PrintDebug(Who.GetDisplayName() + " skipping gem calc(" + Time + ").")
 		Return
 	EndIf
 
@@ -1075,6 +1153,11 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+
+	;; stop processing actors that don't need it.
+	If(Count == 0)
+		self.ActorTrackForGems(Who,FALSE)
+	EndIf
 
 	Float Gem
 	Float Before
@@ -1154,8 +1237,11 @@ same.}
 
 		If(Dest == None)
 			;; without a destination drop the milk the ground.
-			ObjectReference o = Source.DropObject(MilkType,1)
+			ObjectReference o = Source.PlaceAtMe(MilkType,1,FALSE,TRUE)
+			o.MoveToNode(Source,"Breast")
 			o.SetActorOwner(self.Player.GetActorBase())
+			o.Enable()
+			o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
 		Else
 			;; else put it in their bag.
 			Dest.AddItem(MilkType,1)
@@ -1192,7 +1278,7 @@ the type of milk that we should spawn in the world.}
 	EndIf
 
 	;; give the generic milk that sucks.
-	Return self.dcc_sgo_ListRaceNormal.GetAt(0)
+	Return self.dcc_sgo_ListMilkItems.GetAt(0)
 EndFunction
 
 ;;;;;;;;
@@ -1227,11 +1313,16 @@ Function ActorMilkUpdateData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its milk data recalculated. if we have gained another
 full bottle then emit a mod event saying how many bottles are ready to go.}
 
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Milk")
+
+	If(Math.LogicalAnd(Bio,self.BioProduceMilk) == 0)
+		;; no need to recalculate someone who cant inseminate.
+		Return
+	EndIf
 
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
-		self.PrintDebug(Who.GetDisplayName() + " skipping milk calc (" + Time + ").")
 		Return
 	EndIf
 
@@ -1263,6 +1354,168 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	EndIf
 
 	self.ActorBodyUpdate_BreastScale(Who)
+	Return
+EndFunction
+
+;/*****************************************************************************
+                                                   __ 
+ .-----.-----.--------.-----.-----.   .---.-.-----|__|
+ |__ --|  -__|        |  -__|     |   |  _  |  _  |  |
+ |_____|_____|__|__|__|_____|__|__|   |___._|   __|__|
+                                            |__|      
+
+*****************************************************************************/;
+
+Function ActorSemenGiveTo(Actor Source, Actor Dest, Int Count=1)
+{transfer a bottle of semen from one actor to another. both actors can be the
+same.}
+
+	Form SemenType
+	Int x
+
+	x = 0
+	While(x < Count)
+		SemenType = self.ActorSemenRemove(Source)
+		If(SemenType == None)
+			self.Print(Source.GetDisplayName() + " is not ready to give semen.");
+			Return
+		EndIf
+
+		If(Dest == None)
+			;; without a destination drop the semen on the ground from the
+			;; tip of the penis for the lulz.
+			ObjectReference o = Source.PlaceAtMe(SemenType,1,FALSE,TRUE)
+			o.MoveToNode(Source,"NPC Genitals06 [Gen06]")
+			o.SetActorOwner(self.Player.GetActorBase())
+			o.Enable()
+			o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
+		Else
+			;; else put it in their bag.
+			Dest.AddItem(SemenType,1)
+		EndIf
+
+		x += 1
+	EndWhile
+
+	Return
+EndFunction
+
+Form Function ActorSemenRemove(Actor Who)
+{remove a bottle of semen from the specified actor. returns a form describing
+the type of semen that we should spawn in the world.}
+
+	If(self.ActorSemenGetWeight(Who) < 1.0)
+		Return None
+	EndIf
+
+	Int Index
+
+	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Data.Semen",-1.0)
+
+	;; give a semen for normal races.
+	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListSemenItems.GetAt(Index)
+	EndIf
+
+	;; give a semen for vampire races that match normal races.
+	Index = self.dcc_sgo_ListRaceVampire.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListSemenItems.GetAt(Index)
+	EndIf
+
+	;; give the generic semen that sucks.
+	Return self.dcc_sgo_ListSemenItems.GetAt(0)
+EndFunction
+
+;;;;;;;;
+
+Int Function ActorSemenGetCapacity(Actor Who)
+{figure out how much semen this actor can carry.}
+
+	;; no mods return a default of 0. a mod of 1.5 means i want to be able to
+	;; carry 150% more milks.
+	Return (self.OptSemenMaxCapacity * (self.ActorModGetTotal(Who,"SemenCapacity") + 1)) as Int
+EndFunction
+
+Float Function ActorSemenGetTime(Actor Who)
+{figure out how fast this actor is generating semen.}
+
+	Return (self.OptSemenProduceTime * (self.ActorModGetTotal(Who,"SemenRate") + 1))
+EndFunction
+
+Float Function ActorSemenGetPercent(Actor Who)
+{find the current semen percentage of fullness.}
+
+	Return (self.ActorSemenGetWeight(Who) / self.OptSemenMaxCapacity) * 100
+EndFunction
+
+Float Function ActorSemenGetWeight(Actor Who)
+{find the current semen weight being carried.}
+
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
+	Int FirstTime = 0
+	Float Semen = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Semen",-1.0)
+
+	If(Semen == -1.0)
+		If(Math.LogicalAnd(Bio,self.BioInseminate))
+			StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Semen",self.OptSemenMaxCapacity)
+			Semen = self.OptSemenMaxCapacity
+		Else
+			Semen = 0.0
+		EndIf
+	EndIf
+
+	Return Semen
+EndFunction
+
+Function ActorSemenUpdateData(Actor Who, Bool Force=FALSE)
+{cause this actor to have its milk data recalculated. if we have gained another
+full bottle then emit a mod event saying how many bottles are ready to go.}
+
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
+	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Semen")
+
+	If(Math.LogicalAnd(Bio,self.BioInseminate) == 0)
+		;; no need to recalculate someone who cant inseminate.
+		;; self.PrintDebug(Who.GetDisplayName() + " does not need semen")
+		Return
+	EndIf
+
+	If(Time < 1.0 && !Force)
+		;; no need to recalculate this actor more than once a game hour.
+		;; self.PrintDebug(Who.GetDisplayName() + " semen calc too soon")
+		Return
+	EndIf
+
+	;;;;;;;;
+	;;;;;;;;
+
+	Float Capacity = self.ActorSemenGetCapacity(Who)
+	Float Semen = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Semen",0.0)
+	Float Before = Semen
+
+	;; produce time 12hr (2/day), once an hour
+	;; 1 / 12 = 0.083/hr * 24 = 2 = two per day = right
+
+	Semen += (Time / self.ActorSemenGetTime(Who))
+	If(Semen > Capacity)
+		self.Immersive_OnSemenFull(Who)
+		Semen = Capacity
+	EndIf
+
+	StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Semen",Semen)
+	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Semen")
+
+	;;;;;;;;
+	;;;;;;;;
+
+	If(Before as Int < Semen as Int)
+		self.Immersive_OnSemenProgress(Who)
+		self.EventSendSemenProgress(Who,(Semen as Int))
+	EndIf
+
+	self.ActorBodyUpdate_TesticleScale(Who)
 	Return
 EndFunction
 
@@ -1385,6 +1638,62 @@ Function ActorActionMilk_Duo(Actor Source, Actor Dest)
 	Return
 EndFunction
 
+Function ActorActionWank(Actor Source, Actor Dest)
+{perform the full wanking sequence.}
+
+	If(self.ActorSemenGetWeight(Source) < 1.0)
+		self.Print(Source.GetDisplayName() + " is not ready to be wanked.")
+		Return
+	EndIf
+
+	If(Source == Dest)
+		self.ActorActionWank_Solo(Source)
+	Else
+		self.ActorActionWank_Duo(Source,Dest)
+	EndIf
+
+	self.ActorTrackForSemen(Source,TRUE)
+	Return
+EndFunction
+
+Function ActorActionWank_Solo(Actor Source)
+{single actor wanking sequence.}
+
+	Actor Dest = None
+	If(Source == self.Player)
+		Dest = self.Player
+	EndIf
+
+	self.BehaviourDefault(Source)
+	self.ActorRemoveChestpiece(Source)
+	self.ImmersiveAnimationWanking(Source)
+
+	While(self.ActorSemenGetWeight(Source) >= 1.0)
+		self.ImmersiveBlush(Source)
+		Utility.Wait(2.0)
+		self.ImmersiveExpression(Source,TRUE)
+		self.ImmersiveSoundMoan(Source,FALSE)
+		Utility.Wait(2.0)
+		self.ActorSemenGiveTo(Source,Dest,1)
+		self.ActorBodyUpdate_TesticleScale(Source)
+		self.ImmersiveExpression(Source,FALSE)
+	EndWhile
+
+	self.ImmersiveExpression(Source,FALSE)
+	self.ImmersiveAnimationIdle(Source)
+	self.ActorReplaceChestpiece(Source)
+	self.BehaviourClear(Source,TRUE)
+
+	Return
+EndFunction
+
+Function ActorActionWank_Duo(Actor Source, Actor Dest)
+{dual actor wanking sequence.}
+
+	Return
+EndFunction
+
+
 ;/*****************************************************************************
   __                                    __               __     __   
  |__.--------.--------.-----.----.-----|__.-----.-----._|  |_ _|  |_ 
@@ -1414,6 +1723,18 @@ Function Immersive_OnMilkFull(Actor Who)
 EndFunction
 
 Function Immersive_OnMilkProgress(Actor Who)
+{send messages about milk progression.}
+
+	Return
+EndFunction
+
+Function Immersive_OnSemenFull(Actor Who)
+{send messages about milk being full.}
+
+	Return
+EndFunction
+
+Function Immersive_OnSemenProgress(Actor Who)
 {send messages about milk progression.}
 
 	Return
@@ -1511,6 +1832,13 @@ Function ImmersiveAnimationMilking(Actor Who)
 	Return
 EndFunction
 
+Function ImmersiveAnimationWanking(Actor Who)
+{play the milking animation on an actor.} 
+
+	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S2")
+	Return
+EndFunction
+
 ;/*****************************************************************************
                                              __ 
  .--------.-----.-----.--.--.   .---.-.-----|__|
@@ -1598,11 +1926,22 @@ Function MenuMain_Construct(Actor Who)
 
 	Bool ItemMilkEnable = FALSE
 	String ItemMilkLabel = "Not Milkable"
-	String ItemMilkText = "Milk her dry."
+	String ItemMilkText = "Milk it dry."
 
 	If(self.ActorMilkGetWeight(Who) > 0.0)
 		ItemMilkEnable = TRUE
 		ItemMilkLabel = "Milk (" + (self.ActorMilkGetWeight(Who) as Int) + ", " + (self.ActorMilkGetPercent(Who) as Int) + "%)"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemSemenEnable = FALSE
+	String ItemSemenLabel = "Not Wankable"
+	String ItemSemenText = "Wank it dry."
+
+	If(self.ActorSemenGetWeight(Who) > 0.0)
+		ItemSemenEnable = TRUE
+		ItemSemenLabel = "Semen (" + (self.ActorSemenGetWeight(Who) as Int) + ", " + (self.ActorSemenGetPercent(Who) as Int) + "%)"
 	EndIf
 
 	;;;;;;;;
@@ -1613,6 +1952,7 @@ Function MenuMain_Construct(Actor Who)
 	self.MenuWheelSetItem(2,ItemToggleInseminateLabel,ItemToggleInseminateText,ItemToggleInseminateEnable)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
+	self.MenuWheelSetItem(6,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
 
 	Return
 EndFunction
@@ -1632,6 +1972,8 @@ Function MenuMain_Handle(Actor Who)
 		self.ActorActionBirth(Who,Who)
 	ElseIf(Result == 5)
 		self.ActorActionMilk(Who,Who)
+	ElseIf(Result == 6)
+		self.ActorActionWank(Who,Who)
 	EndIf
 
 	Return

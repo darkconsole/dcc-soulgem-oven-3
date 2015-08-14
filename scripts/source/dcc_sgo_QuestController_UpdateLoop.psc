@@ -16,6 +16,7 @@ dcc_sgo_QuestController Property SGO Auto
 Event OnUpdate()
 	self.OnUpdate_GemData()
 	self.OnUpdate_MilkData()
+	self.OnUpdate_SemenData()
 	self.RegisterForSingleUpdate(SGO.OptUpdateInterval)
 EndEvent
 
@@ -24,6 +25,9 @@ EndEvent
 
 Function OnUpdate_GemData()
 {run through the list to process gem data for actors on the list.}
+
+	;; cleanup things the engine fucked us over.
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",None,TRUE)
 
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Gem")
 	Actor Who
@@ -49,6 +53,9 @@ EndFunction
 Function OnUpdate_MilkData()
 {run through the list to process the milk data for actors on the list.}
 
+	;; cleanup things the engine fucked us over.
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",None,TRUE)
+
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Milk")
 	Actor Who
 
@@ -61,6 +68,30 @@ Function OnUpdate_MilkData()
 		If(Who)
 			;;SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
 			SGO.ActorMilkUpdateData(Who)
+			Utility.Wait(SGO.OptUpdateDelay)
+		EndIf
+
+		x += 1
+	EndWhile
+
+	Return
+EndFunction
+
+Function OnUpdate_SemenData()
+{run through the list to process the semen data for actors on the list.}
+
+	;; cleanup things the engine fucked us over.
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",None,TRUE)
+
+	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Semen")
+	Actor Who
+
+	Int x = 0
+	While(x < Count)
+		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Semen",x) as Actor
+
+		If(Who)
+			SGO.ActorSemenUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 
