@@ -26,6 +26,7 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; StorageUtil Keys (Global) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FormList SGO.ActorList.Gem - list all actors currently growing gems.
 ;; FormList SGO.ActorList.Milk - list all actors currently producing milk.
+;; FormList SGO.ActorList.Semen - list all the actors producing semen.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -34,14 +35,19 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; Float    SGO.Actor.Time.Semen - the last time this actor was wanked.
 ;; Float[]  SGO.Actor.Data.Gem - the gem data for this actor.
 ;; Float    SGO.Actor.Data.Milk - the milk data for this actor.
+;; Float    SGO.Actor.Data.Semen - the semen data for this actor.
 ;; String[] SGO.Actor.Mod.ScaleBelly
 ;; String[] SGO.Actor.Mod.ScaleBellyMax
 ;; String[] SGO.Actor.Mod.ScaleBreast
 ;; String[] SGO.Actor.Mod.ScaleBreastMax
+;; String[] SGO.Actor.Mod.ScaleTesticle
+;; String[] SGO.Actor.Mod.ScaleTesticleMax
 ;; String[] SGO.Actor.Mod.GemCapacity
 ;; String[] SGO.Actor.Mod.GemRate
 ;; String[] SGO.Actor.Mod.MilkCapacity
 ;; String[] SGO.Actor.Mod.MilkRate
+;; String[] SGO.Actor.Mod.SemenCapacity
+;; String[] SGO.Actor.Mod.SemenRate
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -52,19 +58,20 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; Int   SGO.ActorGemGetCapacity(Actor Who)
 ;; Float SGO.ActorGemGetTime(Actor Who)
 ;; Float SGO.ActorGemGetWeight(Actor Who)
-
 ;; Int   SGO.ActorMilkGetCapacity(Actor Who)
-;; Float SGO.ACtorMilkGetTime(Actor Who)
+;; Float SGO.ActorMilkGetTime(Actor Who)
 ;; Float SGO.ActorMilkGetWeight(Actor Who)
+;; Int   SGO.ActorSemenGetCapacity(Actor Who)
+;; Float SGO.ActorSemenGetTime(Actor Who)
+;; Float SGO.ActorSemenGetWeight(Actor Who)
 
 ;; Float SGO.ActorGetTimeSinceUpdate(Actor Who, String What)
 ;; Void  SGO.ActorSetTimeUpdated(Actor Who, String What[, Float When])
 
 ;; Void  SGO.ActorTrackForGems(Actor Who, Bool Enabled)
 ;; Void  SGO.ActorTrackForMilk(Actor who, Bool Enabled)
+;; Void  SGO.ActorTrackForSemen(Actor who, Bool Enabled)
 
-;; Void  SGO.ActorGemUpdateData(Actor Who, Bool Force)
-;; Void  SGO.ActorMilkUpdateData(Actor Who, Bool Force)
 ;; Float SGO.ActorModGetTotal(Actor Who, String What)
 ;; Float SGO.ActorModGetValue(Actor Who, String What, String ModKey)
 ;; Void  SGO.ActorModSetValue(Actor Who, String What, String ModKey)
@@ -86,12 +93,18 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; This event describes how many bottles of milk the specified actor is
 ;; carrying. It is emitted any time another whole bottle is ready.
 
+;; SGO.OnSemenProgress ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Int Amount
+;; This event describes how many bottles of semen the specified actor is
+;; carrying. It is emitted any time another whole bottle is ready.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; NiOverride Keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; SGO.Scale on NPC Belly
 ;; SGO.Scale on NPC L Breast
 ;; SGO.Scale on NPC R Breast
+;; SGO.Scale on NPC GenitalsScrotum [GenScrot]
 
 ;/*****************************************************************************
                                     __   __             
@@ -872,7 +885,7 @@ Function ActorTrackForSemen(Actor Who, Bool Enabled)
 	If(Enabled)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Semen",Who,FALSE)
 	Else
-		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,FALSE)
+		StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",Who,FALSE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Semen")
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Semen")
 	EndIf
@@ -1317,12 +1330,14 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Milk")
 
 	If(Math.LogicalAnd(Bio,self.BioProduceMilk) == 0)
-		;; no need to recalculate someone who cant inseminate.
+		;; no need to recalculate someone who cant make milk.
+		;; self.PrintDebug(Who.GetDisplayName() + " skipping milk (no produce)")
 		Return
 	EndIf
 
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
+		;; self.PrintDebug(Who.GetDisplayName() + " skipping milk (not time)")
 		Return
 	EndIf
 
@@ -1666,6 +1681,7 @@ Function ActorActionWank_Solo(Actor Source)
 
 	self.BehaviourDefault(Source)
 	self.ActorRemoveChestpiece(Source)
+	self.ImmersiveErection(Source,TRUE)
 	self.ImmersiveAnimationWanking(Source)
 
 	While(self.ActorSemenGetWeight(Source) >= 1.0)
@@ -1681,6 +1697,7 @@ Function ActorActionWank_Solo(Actor Source)
 
 	self.ImmersiveExpression(Source,FALSE)
 	self.ImmersiveAnimationIdle(Source)
+	self.ImmersiveErection(Source,FALSE)
 	self.ActorReplaceChestpiece(Source)
 	self.BehaviourClear(Source,TRUE)
 
@@ -1838,6 +1855,19 @@ Function ImmersiveAnimationWanking(Actor Who)
 	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S2")
 	Return
 EndFunction
+
+Function ImmersiveErection(Actor Who, Bool Enable)
+{give the actor an erection or not.}
+
+	If(Enable)
+		Debug.SendAnimationEvent(Who, "SOSFastErect")
+	Else
+		Debug.SendAnimationEvent(Who, "SOSFlaccid")
+	EndIf
+
+	Return
+EndFunction
+
 
 ;/*****************************************************************************
                                              __ 

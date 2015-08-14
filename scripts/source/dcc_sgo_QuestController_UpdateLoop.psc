@@ -59,14 +59,14 @@ Function OnUpdate_MilkData()
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Milk")
 	Actor Who
 
-	;;SGO.PrintDebug("Milk List " + Count)
+	;; SGO.PrintDebug("Milk List " + Count)
 
 	Int x = 0
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Milk",x) as Actor
 
 		If(Who)
-			;;SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
+			;; SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
 			SGO.ActorMilkUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
