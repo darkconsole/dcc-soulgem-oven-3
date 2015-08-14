@@ -354,6 +354,36 @@ Function PrintDebug(String Msg)
 EndFunction
 
 ;/*****************************************************************************
+        __   __ __ __ __              ___                  
+ .--.--|  |_|__|  |__|  |_.--.--.   .'  _.--.--.-----.----.
+ |  |  |   _|  |  |  |   _|  |  |   |   _|  |  |     |  __|
+ |_____|____|__|__|__|____|___  |   |__| |_____|__|__|____|
+                          |_____|                          
+                                                           
+*****************************************************************************/;
+
+String Function GetGemName(Float Value)
+{based on the gem value, return its short name. doing it here for intl later.}
+
+	If(Value < 1)
+		Return "Fragment"
+	ElseIf(Value < 2)
+		Return "Petty"
+	ElseIf(Value < 3)
+		Return "Lesser"
+	ElseIf(Value < 4)
+		Return "Common"
+	ElseIf(Value < 5)
+		Return "Greater"
+	ElseIf(value < 6)
+		Return "Grand"
+	Else
+		Return "Black"
+	EndIf
+
+EndFunction
+
+;/*****************************************************************************
      __                            __                        
  .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
  |  _  |  -__|  _  |  -__|     |  _  |  -__|     |  __|  |  |
@@ -523,13 +553,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 
 		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioProduceGems) > 0)
 			self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
-			self.ActorTrackForGems(ActorList[x],True)
 			self.ActorGemAdd(ActorList[x])
-		EndIf
-
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioProduceMilk) > 0)
-			self.PrintDebug(ActorList[x].GetDisplayName() + " will produce milk.")
-			self.ActorTrackForMilk(ActorList[x],True)
 		EndIf
 
 		x += 1
@@ -854,8 +878,9 @@ EndFunction
 Function ActorTrackForGems(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors who are growing gems}
 
-	If(Enabled)
+	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceGems) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Gem",Who,False)
+		self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",Who,True)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Gem")
@@ -868,8 +893,9 @@ EndFunction
 Function ActorTrackForMilk(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating milk.}
 
-	If(Enabled)
+	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceMilk) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,FALSE)
+		self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Milk")
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,TRUE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Milk")
@@ -882,8 +908,9 @@ EndFunction
 Function ActorTrackForSemen(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating semen.}
 
-	If(Enabled)
+	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioInseminate) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Semen",Who,FALSE)
+		self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Semen")
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",Who,FALSE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Semen")
@@ -1015,12 +1042,14 @@ EndFunction
                                           
 *****************************************************************************/;
 
-Function ActorGemAdd(Actor Who)
+Function ActorGemAdd(Actor Who, Float Value=0.0)
 {add another gem to this actor's pipeline.}
 
 	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") < self.ActorGemGetCapacity(Who))
-		StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",0.0,TRUE)
+		StorageUtil.FloatListAdd(Who,"SGO.Actor.Data.Gem",Value,TRUE)
 		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
+		self.ActorTrackForGems(Who,TRUE)
+		self.ActorTrackForMilk(Who,TRUE)
 	EndIf
 
 	Return
@@ -1048,6 +1077,7 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 			o.MoveToNode(Source,"Vagina")
 			o.SetActorOwner(self.Player.GetActorBase())
 			o.Enable()
+			Utility.Wait(0.1)
 			o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
 		Else
 			;; else put it in the bag.
@@ -1087,6 +1117,41 @@ gem place and gem give functions.}
 	EndIf
 EndFunction
 
+Form Function ActorGemRemoveFromInventory(Actor Who, Int Size)
+{remove a gem or fragment of type from the specified actor's inventory. for
+actual gems it will prefer unfilled over filled.}
+
+	Form What
+	Int x
+
+	If(Size == 0)
+		;; handle the removal of various fragments.
+
+		x = 0
+		While(x < self.SoulgemFragment.Length)
+			If(Who.GetItemCount(self.SoulgemFragment[x]) > 0)
+				Who.RemoveItem(self.SoulgemFragment[x],1,FALSE)
+				Return self.SoulgemFragment[x]
+			EndIf
+			x += 1
+		EndWhile
+	Else
+		;; handle the removal of gems. prefer unfilled first.
+
+		If(Who.GetItemCount(self.SoulgemEmpty[(Size - 1)]) > 0)
+			Who.RemoveItem(self.SoulgemEmpty[(Size - 1)],1,FALSE)
+			Return self.SoulgemEmpty[Size]
+		EndIf
+
+		If(Who.GetItemCount(self.SoulgemFull[(Size - 1)]) > 0)
+			Who.RemoveItem(self.SoulgemFull[(Size - 1)],1,FALSE)
+			Return self.SoulgemFull[Size]
+		EndIf
+	EndIf
+
+	Return None
+EndFunction
+
 ;;;;;;;;
 
 Int Function ActorGemGetCapacity(Actor Who)
@@ -1101,6 +1166,49 @@ Int Function ActorGemGetCount(Actor Who)
 {get how many gems are currently brewing.}
 	
 	Return StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+EndFunction
+
+Int[] Function ActorGemGetInventory(Actor Who)
+{get the state of gems from the actors inventory. returns a length 7 array.}
+
+	Int[] Result = new Int[7]
+	Int x
+
+	x = 0
+	While(x < Result.Length)
+		If(x == 0)
+			Result[x] = self.ActorGemGetInventory_GetFragments(Who)
+		Else
+			Result[x] = self.ActorGemGetInventory_GetGems(Who,(x - 1))
+		EndIf
+
+		x += 1
+	EndWhile
+
+	Return Result
+EndFunction
+
+Int Function ActorGemGetInventory_GetFragments(Actor Who)
+{how many of the various fragments do we have?}
+
+	Int Count = 0
+	Int x = 0
+
+	While(x < self.SoulgemFragment.Length)
+		Count += Who.GetItemCount(self.SoulgemFragment[x])
+		x += 1
+	EndWhile
+
+	Return Count
+EndFunction
+
+Int Function ActorGemGetInventory_GetGems(Actor Who, Int Offset)
+{how many of a specific gem offset we have?}
+
+	Int Count = Who.GetItemCount(self.SoulgemEmpty[Offset])
+	Count += Who.GetItemCount(self.SoulgemFull[Offset])
+
+	Return Count
 EndFunction
 
 Float Function ActorGemGetTime(Actor Who)
@@ -1579,6 +1687,7 @@ Function ActorActionBirth_Solo(Actor Source)
 		self.ImmersiveSoundMoan(Source,TRUE)
 		self.ActorGemGiveTo(Source,None,1)
 		self.ActorBodyUpdate_BellyScale(Source)
+		Utility.Wait(3.0)
 	EndWhile
 
 	MiscUtil.SetFreeCameraState(FALSE)
@@ -1686,13 +1795,14 @@ Function ActorActionWank_Solo(Actor Source)
 
 	While(self.ActorSemenGetWeight(Source) >= 1.0)
 		self.ImmersiveBlush(Source)
-		Utility.Wait(2.0)
+		Utility.Wait(3.0)
 		self.ImmersiveExpression(Source,TRUE)
 		self.ImmersiveSoundMoan(Source,FALSE)
-		Utility.Wait(2.0)
+		Utility.Wait(3.0)
 		self.ActorSemenGiveTo(Source,Dest,1)
 		self.ActorBodyUpdate_TesticleScale(Source)
 		self.ImmersiveExpression(Source,FALSE)
+		Utility.Wait(1.0)
 	EndWhile
 
 	self.ImmersiveExpression(Source,FALSE)
@@ -1706,6 +1816,37 @@ EndFunction
 
 Function ActorActionWank_Duo(Actor Source, Actor Dest)
 {dual actor wanking sequence.}
+
+	Return
+EndFunction
+
+Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
+{gem insertion sequence.}
+
+	If(self.ActorGemRemoveFromInventory(Source,Size) == None)
+		self.Print(Source.GetDisplayName() + " has none of those gems to use.")
+		Return
+	EndIf
+
+	self.BehaviourDefault(Dest)
+	self.ActorRemoveChestpiece(Dest)
+	self.ImmersiveAnimationInsertion(Dest)
+	Utility.Wait(3.0)
+
+	self.ImmersiveExpression(Dest,TRUE)
+	self.ImmersiveSoundMoan(Dest,FALSE)
+	self.ImmersiveBlush(Dest)
+	Utility.Wait(3.0)
+
+	self.ActorGemAdd(Dest,Size)
+	self.ActorBodyUpdate_BellyScale(Dest)
+	self.ImmersiveSoundMoan(Dest)
+	Utility.Wait(2.0)
+
+	self.ImmersiveAnimationIdle(Dest)
+	self.ImmersiveExpression(Dest,FALSE)
+	self.ActorReplaceChestpiece(Dest)
+	self.BehaviourClear(Dest,TRUE)
 
 	Return
 EndFunction
@@ -1856,8 +1997,17 @@ Function ImmersiveAnimationWanking(Actor Who)
 	Return
 EndFunction
 
+Function ImmersiveAnimationInsertion(Actor Who)
+{play the insertion animation on an actor.} 
+
+	Debug.SendAnimationEvent(Who,"ZaZAPCHorFA")
+	Return
+EndFunction
+
 Function ImmersiveErection(Actor Who, Bool Enable)
 {give the actor an erection or not.}
+
+	Utility.Wait(0.1)
 
 	If(Enable)
 		Debug.SendAnimationEvent(Who, "SOSFastErect")
@@ -1895,7 +2045,6 @@ Function MenuMain()
 {show the main soulgem oven menu.}
 
 	Actor Who = Game.GetCurrentCrosshairRef() as Actor
-	Int Result
 
 	If(Who == None)
 		Who = self.Player
@@ -1983,6 +2132,7 @@ Function MenuMain_Construct(Actor Who)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 	self.MenuWheelSetItem(6,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
+	self.MenuWheelSetItem(7,"Insert Gem...","Insert gems from inventory.",TRUE)
 
 	Return
 EndFunction
@@ -2004,8 +2154,80 @@ Function MenuMain_Handle(Actor Who)
 		self.ActorActionMilk(Who,Who)
 	ElseIf(Result == 6)
 		self.ActorActionWank(Who,Who)
+	ElseIf(Result == 7)
+		;;Utility.Wait(1.0)
+		self.MenuSoulgemInsert(Who)
 	EndIf
 
 	Return
 EndFunction
 
+Function MenuSoulgemInsert(Actor Who)
+{show the soulgem insertion menu system.}
+
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	;;;;;;;;
+
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
+
+	If(Math.LogicalAnd(Bio,self.BioProduceGems) == 0)
+		self.Print(Who.GetDisplayName() + " cannot produce gems.")
+		Return
+	EndIf
+
+	self.MenuSoulgemInsert_Construct(Who)
+	self.MenuSoulgemInsert_Handle(Who)
+	Return
+EndFunction
+
+Function MenuSoulgemInsert_Construct(Actor Who)
+{construct the soulgem insertion menu}
+
+	Int[] Inventory = self.ActorGemGetInventory(self.Player)
+	Bool Enabled
+	String Label
+	String Text
+	Int x = 0
+
+	UIExtensions.InitMenu("UIWheelMenu")
+
+	While(x < Inventory.Length)
+
+		If(Inventory[x] > 0)
+			Enabled = TRUE
+		Else
+			Enabled = FALSE
+		EndIf
+
+		Label = self.GetGemName(x as Float) + " (" + Inventory[x] + ")"
+		Text = "Insert a " + self.GetGemName(x as Float) + " gem."
+
+		self.MenuWheelSetItem(x,Label,Text,Enabled)
+
+		x += 1
+	EndWhile
+
+	self.MenuWheelSetItem(7,"Cancel","Leave this menu.",TRUE)
+	Return
+EndFunction
+
+Function MenuSoulgemInsert_Handle(Actor Who)
+{handle the soulgem insertion menu.}
+
+	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+
+	If(Result >= 0 && Result <= 6)
+		self.ActorActionInsert(self.Player,Who,Result)
+	Else
+		;; do nothing, cancel.
+	EndIf
+
+	Return
+EndFunction
