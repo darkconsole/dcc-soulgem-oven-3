@@ -120,6 +120,9 @@ Bool  Property OK = FALSE Auto Hidden
 {this will be set to true if everything this mod needs to run has been found
 and accessible during startup or reset.}
 
+Bool Property HasConsoleUtil = FALSE Auto Hidden
+{sentinel value for knowing if we had cu.}
+
 ;; scripts n stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Actor Property Player Auto
@@ -179,6 +182,9 @@ Package Property dcc_sgo_PackageDoNothing Auto
 
 Spell Property dcc_sgo_SpellMenuMain Auto
 {the spell to trigger the main menu.}
+
+ImageSpaceModifier Property dcc_sgo_ImodMenu Auto
+{to tint the screen the classic sgo shade of purple on menus.}
 
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -288,6 +294,7 @@ Function ResetMod_Prepare()
 		Return
 	EndIf
 
+	self.HasConsoleUtil = self.IsConsoleUtilInstalled(FALSE)
 	self.OK = TRUE
 	Return
 EndFunction
@@ -490,6 +497,38 @@ the use of AdjustFloatValue and the like.}
 			Debug.MessageBox("Your PapyrusUtil is too old or has been overwritten by something like SOS. Install PapyrusUtil 2.8 from Nexus and make sure it dominates the load order.")
 		EndIf
 		Return FALSE
+	EndIf
+
+	Return TRUE
+EndFunction
+
+Bool Function IsConsoleUtilInstalled(Bool Popup=TRUE)
+{make sure console util is installed. currently this mod does not require
+consoleutil, so it is optional.}
+
+	If(SKSE.GetPluginVersion("ConsoleUtil") == -1)
+		self.PrintDebug("Not ConsoleUtil")
+	EndIf
+
+	If(SKSE.GetPluginVersion("ConsolePlugin") == -1)
+		self.PrintDebug("Not ConsolePlugin")
+	EndIf
+
+	If(SKSE.GetPluginVersion("ConsolePlugin.dll") == -1)
+		self.PrintDebug("Not ConsolePlugin.dll")
+	EndIf
+
+	If(SKSE.GetPluginVersion("ConsolePlugin2") == -1)
+		self.PrintDebug("Not ConsolePlugin2")
+	EndIf
+
+	If(SKSE.GetPluginVersion("ConsolePlugin2.dll") == -1)
+		self.PrintDebug("Not ConsolePlugin2.dll")
+	EndIf
+
+	If(SKSE.GetPluginVersion("Console") == -1)
+		self.PrintDebug("Not Console")
+		Return False
 	EndIf
 
 	Return TRUE
@@ -1185,10 +1224,10 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 		If(Dest == None)
 			;; without a destination drop the gem the ground.
 			ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
-			o.MoveToNode(Source,"NPC Pelvis")
+			o.MoveToNode(Source,"NPC Pelvis [Pelv]")
 			o.SetActorOwner(self.Player.GetActorBase())
 			o.Enable()
-			Utility.Wait(0.1)
+			Utility.Wait(0.25)
 			o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
 		Else
 			;; else put it in the bag.
@@ -1206,13 +1245,13 @@ Form Function ActorGemRemove(Actor Who)
 what object we should spawn in the world. this will be used mostly by the
 gem place and gem give functions.}
 
-	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",0)
-	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
-
 	If(self.ActorGemGetCount(Who) == 0)
 		;; an empty form if no gems.
 		Return None
 	EndIf
+
+	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",0)
+	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Data.Gem",0)
 
 	If(Value < 1.0)
 		;; return a random fragment if less than a gem.
@@ -2065,6 +2104,17 @@ Function ImmersiveExpression(Actor Who, Bool Enable)
 	EndIf
 EndFunction
 
+Function ImmersiveSheatheWeapon(Actor Who)
+{sheathe the weapon and wait if drawn.}
+
+	If(Who.IsWeaponDrawn())
+		Who.SheatheWeapon()
+		Utility.Wait(3.0)
+	EndIf
+
+	Return
+EndFunction
+
 Function ImmersiveSoundMoan(Actor Who, Bool Hard=FALSE)
 {play a moaning sound from the actor.}
 
@@ -2094,13 +2144,15 @@ EndFunction
 
 Function ImmersiveAnimationBirthing(Actor Who)
 {play a birthing animation on the actor.}
-
+	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(who,"Missionary_A1_S4")
 	Return
 EndFunction
 
 Function ImmersiveAnimationIdle(Actor Who)
 {play the idle animation on an actor.}
+
+	self.ImmersiveSheatheWeapon(Who)
 
 	Debug.SendAnimationEvent(who,"IdleForceDefaultState")
 	;;Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
@@ -2110,6 +2162,7 @@ EndFunction
 Function ImmersiveAnimationMilking(Actor Who)
 {play the milking animation on an actor.} 
 
+	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"ZaZAPCHorFC")
 	Return
 EndFunction
@@ -2117,6 +2170,7 @@ EndFunction
 Function ImmersiveAnimationWanking(Actor Who)
 {play the milking animation on an actor.} 
 
+	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S2")
 	Return
 EndFunction
@@ -2124,6 +2178,7 @@ EndFunction
 Function ImmersiveAnimationInsertion(Actor Who)
 {play the insertion animation on an actor.} 
 
+	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"ZaZAPCHorFA")
 	Return
 EndFunction
@@ -2142,6 +2197,51 @@ Function ImmersiveErection(Actor Who, Bool Enable)
 	Return
 EndFunction
 
+Function ImmersiveMenuCamera(Bool Enable)
+{move the camera when the menu opens.}
+
+	If(!self.HasConsoleUtil)
+	;;	Return
+	EndIf
+
+	Int Camera = Game.GetCameraState()
+	If(Camera != 5 && Camera != 8 && Camera != 9 && Camera != 10)
+		self.PrintDebug("not in third person")
+		Return
+	EndIf
+
+	Float CurX = Utility.GetINIFloat("fOverShoulderPosX:Camera")
+	Float CurZ = Utility.GetINIFloat("fOverShoulderPosZ:Camera")
+	Float CurS = Utility.GetINIFLoat("fShoulderDollySpeed:Camera")
+
+	If(Enable)
+		;;ConsoleUtil.ExecuteCommand("fov 40")
+	Else
+		;;ConsoleUtil.ExecuteCommand("fov")
+	EndIf
+	;;Utility.Wait(0.05)
+
+	If(Enable)
+		StorageUtil.SetFloatValue(None,"SGO.Camera.X",CurX)
+		StorageUtil.SetFloatValue(None,"SGO.Camera.Z",CurZ)
+		StorageUtil.SetFloatValue(None,"SGO.Camera.S",CurS)
+		Utility.SetINIFloat("fOverShoulderPosX:Camera",-50)
+		Utility.SetINIFloat("fOverShoulderPosZ:Camera",-40)
+		Utility.SetINIFloat("fShoulderDollySpeed:Camera",40)
+	Else
+		Utility.SetINIFloat("fOverShoulderPosX:Camera",StorageUtil.GetFloatValue(None,"SGO.Camera.X"))
+		Utility.SetINIFloat("fOverShoulderPosZ:Camera",StorageUtil.GetFloatValue(None,"SGO.Camera.Z"))
+		Utility.SetINIFloat("fShoulderDollySpeed:Camera",StorageUtil.GetFloatValue(None,"SGO.Camera.S"))
+		StorageUtil.UnsetFloatValue(None,"SGO.Camera.X")
+		StorageUtil.UnsetFloatValue(None,"SGO.Camera.Z")
+		StorageUtil.UnsetFloatValue(None,"SGO.Camera.S")
+	EndIf
+
+	Game.UpdateThirdPerson()
+
+	Return
+EndFunction
+
 
 ;/*****************************************************************************
                                              __ 
@@ -2154,26 +2254,33 @@ EndFunction
 
 ;; ui extension utility.
 
-Function MenuWheelSetItem(Int num, String text, String tip, Bool enabled=True)
+Function MenuWheelSetItem(Int Num, String Label, String Text, Bool Enabled=True)
 {assign an item to the uiextensions wheel menu.}
 
-	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionLabelText",num,text)
-	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionText",num,tip)
-	UIExtensions.SetMenuPropertyIndexBool("UIWheelMenu","optionEnabled",num,enabled)
+	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionLabelText",Num,Label)
+	UIExtensions.SetMenuPropertyIndexString("UIWheelMenu","optionText",Num,Text)
+	UIExtensions.SetMenuPropertyIndexBool("UIWheelMenu","optionEnabled",Num,Enabled)
+
+	If(!Enabled)
+		UIExtensions.SetMenuPropertyIndexInt("UIWheelMenu","optionTextColor",Num,0x555555)
+	EndIf
+
 	Return
 EndFunction
 
 ;; mod menus.
 
-Function MenuMain()
+Function MenuMain(Actor Who=None)
 {show the main soulgem oven menu.}
 
-	Actor Who = Game.GetCurrentCrosshairRef() as Actor
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
 
 	If(Who == None)
 		Who = self.Player
 	EndIf
-	
+
 	self.MenuMain_Construct(Who)
 	self.MenuMain_Handle(Who)
 	Return
@@ -2183,36 +2290,6 @@ Function MenuMain_Construct(Actor Who)
 {construct the menu for the main sgo menu.}
 
 	Int ActorBio = self.ActorGetBiologicalFunctions(Who)
-
-	;;;;;;;;
-
-	Bool ItemToggleGemEnable = TRUE
-	String ItemToggleGemLabel = "Enable Gems"
-	String ItemToggleGemText = "Toggle gem pregnancy on/off."
-
-	If(Math.LogicalAnd(ActorBio,self.BioProduceGems) == self.BioProduceGems)
-		ItemToggleGemLabel = "Disable Gems"
-	EndIf
-
-	;;;;;;;;
-
-	Bool ItemToggleMilkEnable = TRUE
-	String ItemToggleMilkLabel = "Enable Milk"
-	String ItemToggleMilkText = "Toggle milk production on/off."
-
-	If(Math.LogicalAnd(ActorBio,self.BioProduceMilk) == self.BioProduceMilk)
-		ItemToggleMilklabel = "Disable Milk"
-	EndIf
-
-	;;;;;;;;
-
-	Bool ItemToggleInseminateEnable = TRUE
-	String ItemToggleInseminateLabel = "Enable Inseminate"
-	String ItemToggleInseminateText = "Toggle to inseminate others on/off."
-
-	If(Math.LogicalAnd(ActorBio,self.BioInseminate) == self.BioInseminate)
-		ItemToggleInseminateLabel = "Disable Inseminate"
-	EndIf
 
 	;;;;;;;;
 
@@ -2250,37 +2327,34 @@ Function MenuMain_Construct(Actor Who)
 	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
-	self.MenuWheelSetItem(0,ItemToggleGemLabel,ItemToggleGemText,ItemToggleGemEnable)
-	self.MenuWheelSetItem(1,ItemToggleMilkLabel,ItemToggleMilkText,ItemToggleMilkEnable)
-	self.MenuWheelSetItem(2,ItemToggleInseminateLabel,ItemToggleInseminateText,ItemToggleInseminateEnable)
+	self.MenuWheelSetItem(0,"Insert Gem...","Insert gems from inventory.",TRUE)
+	self.MenuWheelSetItem(1,"Actor Options...","Set advanced options.",TRUE)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 	self.MenuWheelSetItem(6,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
-	self.MenuWheelSetItem(7,"Insert Gem...","Insert gems from inventory.",TRUE)
-
 	Return
 EndFunction
 
 Function MenuMain_Handle(Actor Who)
 {handle the choice from the sgo menu.}
 
+	self.ImmersiveMenuCamera(TRUE)
+	self.dcc_sgo_ImodMenu.Apply(1.0)
+	Utility.Wait(0.25)
+
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+	self.ImmersiveMenuCamera(FALSE)
 
 	If(Result == 0)
-		self.ActorToggleBiologicalFunction(Who,self.BioProduceGems)
+		self.MenuSoulgemInsert(Who)
 	ElseIf(Result == 1)
-		self.ActorToggleBiologicalFunction(Who,self.BioProduceMilk)
-	ElseIf(Result == 2)
-		self.ActorToggleBiologicalFunction(Who,self.BioInseminate)
+		self.MenuActorOptions(Who)
 	ElseIf(Result == 4)
 		self.ActorActionBirth(Who,Who)
 	ElseIf(Result == 5)
 		self.ActorActionMilk(Who,Who)
 	ElseIf(Result == 6)
 		self.ActorActionWank(Who,Who)
-	ElseIf(Result == 7)
-		;;Utility.Wait(1.0)
-		self.MenuSoulgemInsert(Who)
 	EndIf
 
 	Return
@@ -2338,19 +2412,24 @@ Function MenuSoulgemInsert_Construct(Actor Who)
 		x += 1
 	EndWhile
 
-	self.MenuWheelSetItem(7,"Cancel","Leave this menu.",TRUE)
+	self.MenuWheelSetItem(7,"[Main Menu]","Back to main menu.",TRUE)
 	Return
 EndFunction
 
 Function MenuSoulgemInsert_Handle(Actor Who)
 {handle the soulgem insertion menu.}
 
+	self.ImmersiveMenuCamera(TRUE)
+	self.dcc_sgo_ImodMenu.Apply(1.0)
+	Utility.Wait(0.25)
+
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+	self.ImmersiveMenuCamera(FALSE)
 
 	If(Result >= 0 && Result <= 6)
 		self.ActorActionInsert(self.Player,Who,Result)
 	Else
-		;; do nothing, cancel.
+		self.MenuMain(Who)
 	EndIf
 
 	Return
@@ -2359,5 +2438,85 @@ EndFunction
 Function MenuActorOptions(Actor Who)
 {show the biological feature toggle menu}
 
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	self.MenuActorOptions_Construct(Who)
+	self.MenuActorOptions_Handle(Who)
 	Return
 EndFunction
+
+Function MenuActorOptions_Construct(Actor Who)
+{construct the actor option menu.}
+
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
+
+	;;;;;;;;
+
+	Bool ItemGemEnable = TRUE
+	String ItemGemLabel = "Enable Gems"
+	String ItemGemText = "Toggle gem pregnancy on/off."
+
+	If(Math.LogicalAnd(Bio,self.BioProduceGems) == self.BioProduceGems)
+		ItemGemLabel = "Disable Gems"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemMilkEnable = TRUE
+	String ItemMilkLabel = "Enable Milk"
+	String ItemMilkText = "Toggle milk production on/off."
+
+	If(Math.LogicalAnd(Bio,self.BioProduceMilk) == self.BioProduceMilk)
+		ItemMilklabel = "Disable Milk"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemInseminateEnable = TRUE
+	String ItemInseminateLabel = "Enable Inseminate"
+	String ItemInseminateText = "Toggle to inseminate others on/off."
+
+	If(Math.LogicalAnd(Bio,self.BioInseminate) == self.BioInseminate)
+		ItemInseminateLabel = "Disable Inseminate"
+	EndIf
+
+	;;;;;;;;
+
+	UIExtensions.InitMenu("UIWheelMenu")
+	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable)
+	self.MenuWheelSetItem(1,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
+	self.MenuWheelSetItem(2,ItemInseminateLabel,ItemInseminateText,ItemInseminateEnable)
+	self.MenuWheelSetItem(7,"[Main Menu]","Back to main menu.",TRUE)
+
+	Return
+EndFunction
+
+Function MenuActorOptions_Handle(Actor Who)
+{handle the actor option menu.}
+
+	self.ImmersiveMenuCamera(TRUE)
+	self.dcc_sgo_ImodMenu.Apply(1.0)
+	Utility.Wait(0.25)
+
+	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+	self.ImmersiveMenuCamera(FALSE)
+
+	If(Result == 0)
+		self.ActorToggleBiologicalFunction(Who,self.BioProduceGems)
+	ElseIf(Result == 1)
+		self.ActorToggleBiologicalFunction(Who,self.BioProduceMilk)
+	ElseIf(Result == 2)
+		self.ActorToggleBiologicalFunction(Who,self.BioInseminate)
+	ElseIf(Result == 7)
+		self.MenuMain(Who)
+	EndIf
+
+	Return
+EndFunction
+
