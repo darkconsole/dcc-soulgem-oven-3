@@ -31,12 +31,14 @@ Scriptname dcc_sgo_QuestController extends Quest
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; StorageUtil Keys (Actor) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Float    SGO.Actor.Time.Gem - the last time this actor's gem data updated.
-;; Float    SGO.Actor.Time.Milk - the last time this actor's milk data updated.
-;; Float    SGO.Actor.Time.Semen - the last time this actor was wanked.
+;; Float    SGO.Actor.Time.Gem - the last time actor's gem data updated.
+;; Float    SGO.Actor.Time.Milk - the last time actor's milk data updated.
+;; Float    SGO.Actor.Time.Semen - the last time actor semen data was updated.
+;; Float    SGO.Actor.Time.Fertility - the last time actor's fertility updated.
 ;; Float[]  SGO.Actor.Data.Gem - the gem data for this actor.
 ;; Float    SGO.Actor.Data.Milk - the milk data for this actor.
 ;; Float    SGO.Actor.Data.Semen - the semen data for this actor.
+;; Float    SGO.Actor.Data.Fertility - the fertility data for this actor.
 ;; String[] SGO.Actor.Mod.ScaleBelly
 ;; String[] SGO.Actor.Mod.ScaleBellyMax
 ;; String[] SGO.Actor.Mod.ScaleBreast
@@ -183,6 +185,9 @@ Package Property dcc_sgo_PackageDoNothing Auto
 Spell Property dcc_sgo_SpellMenuMain Auto
 {the spell to trigger the main menu.}
 
+Spell Property dcc_sgo_SpellInflate Auto
+{the cum inflation spell}
+
 ImageSpaceModifier Property dcc_sgo_ImodMenu Auto
 {to tint the screen the classic sgo shade of purple on menus.}
 
@@ -218,7 +223,7 @@ Float Property OptScaleBreastMax = 1.5 Auto Hidden
 Float Property OptScaleTesticleMax = 1.0 Auto Hidden
 {the maximum size of the testicles when filled up.}
 
-Int Property OptPregChanceHumanoid = 75 Auto Hidden
+Int Property OptPregChanceHumanoid = 50 Auto Hidden
 {preg chance on encounters with people.}
 
 Int Property OptPregChanceBeast = 10 Auto Hidden
@@ -235,6 +240,12 @@ Float Property OptProgressAlchFactor = 1.0 Auto Hidden
 
 Float Property OptProgressEnchFactor = 1.0 Auto Hidden
 {how fast enchanting should level by birthing.}
+
+Bool Property OptFertility = TRUE Auto Hidden
+Float Property OptFertilityWindow = 2.0 Auto Hidden
+Int Property OptFertilityDays = 28 Auto Hidden
+Bool Property OptFertilitySync = FALSE Auto Hidden
+Bool Property OptFertilityMult = TRUE Auto Hidden
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -314,6 +325,11 @@ Function ResetMod_Values()
 	self.OptScaleTesticleMax = 1.0
 	self.OptProgressEnchFactor = 1.0
 	self.OptProgressAlchFactor = 1.0
+	self.OptFertility = True
+	self.OptFertilityWindow = 2.0
+	self.OptFertilityDays = 28
+	self.OptFertilitySync = FALSE
+	self.OptFertilityMult = True
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
@@ -626,9 +642,9 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	x = 0
 	While(x < ActorList.Length)
 		If(MaleCount > 0)
-			Preg = (self.OptPregChanceHumanoid >= Utility.RandomInt(0,100))
+			Preg = (self.OptPregChanceHumanoid <= (Utility.RandomInt(0,100) * self.ActorFertilityGetMod(ActorList[x])))
 		Else
-			Preg = (self.OptPregChanceBeast >= Utility.RandomInt(0,100))
+			Preg = (self.OptPregChanceBeast <= (Utility.RandomInt(0,100) * self.ActorFertilityGetMod(ActorList[x])))
 		EndIf
 
 		If(Preg)
@@ -792,12 +808,10 @@ been updated. the string value is the storageutil name for the data you want.}
 	Float Last = StorageUtil.GetFloatValue(Who,What,0.0)
 
 	If(Last == 0.0)
-		StorageUtil.SetFloatValue(Who,What,Current)
-
-		;;If(What != "SGO.Actor.Time.Semen")
-			;; we want male actors to have full sacks to start iwht.
-			Last = Current
-		;;EndIf
+		;; when this is the first time report the first time was more than an
+		;; hour ago so that things like fertility initialise on new games.
+		Last = Current - (1.5 / 24)
+		StorageUtil.SetFloatValue(Who,What,Last)
 	EndIf
 
 	Return (Current - Last) * 24.0
@@ -893,6 +907,82 @@ system because it will primarily be used on soulgems birthing.}
 	;; once this calc feels good to me at default, users can tweak it via the factor.
 
 	Game.AdvanceSkill("Enchanting",self.GetLeveledValue(Level,Value,self.OptProgressEnchFactor))
+	Return
+EndFunction
+
+Float Function ActorFertilityGetMod(Actor Who, float Vmod=0.0)
+{fetch the current multiplier for the fertility value using science and shit.}
+
+	;; the x value of the wave.
+	Float Fval = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Fertility",missing=0.0)
+	Fval += Vmod
+
+
+	;; the period offset is used to crank the amplitude and vertical offset of
+	;; the wave.
+	Float Poff = self.OptFertilityWindow / 2
+
+	;; the period length.
+	Int Plen = self.OptFertilityDays
+
+	;;  /     /          \      \
+	;; |     | 2[pi]      |      |
+	;; | sin | ----- fval | poff | + poff
+	;; |     | plen       |      |
+	;;  \     \          /      /
+	;;           period    amp    y-offset
+
+	;; SINEWAVESMOTHERFUCKER.
+
+	Return (Math.Sin(Math.RadiansToDegrees(((2*3.14159) / Plen) * Fval)) * Poff) + Poff
+EndFunction
+
+Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
+{this function will keep a running loop of time from 0 to 28.}
+
+	;; 1 2 3... 27 28 0 1 2 3...
+
+	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Fertility")
+
+	If(Time < 1.0 && !Force)
+		Return
+	EndIf
+
+	;; get our current values. if this actor has not yet ever been calculated
+	;; then we set them at a random point in the cycle to try and avoid having
+	;; all the females in skyrim synced up.
+	Float Fval = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Fertility",missing=Utility.RandomFloat(0.0,self.OptFertilityDays))
+	Float Nval = Fval + (Time / 24)
+
+	;; attempt to sync up cycles with any followers currently following lololol.
+	;; for starters we will try just making followers run hotter until they
+	;; are synced up.
+	;;If(self.OptFertilitySync && SexLab.GetGender(self.Player) == 1)
+	;;	If(Who != self.Player && SexLab.GetGender(Who) == 1 && self.Player.GetDistance(Who) <= 250)
+	;;		If(Math.abs(self.ActorFertilityGetMod(Who)-self.ActorFertilityGetMod(self.Player)) / self.OptFertilityWindow > 0.1)
+	;;			Nval += (self.OptFertilityDays * 0.01) * Time
+	;;		EndIf
+	;;	EndIf
+	;;EndIf
+
+	self.PrintDebug(Who.GetDisplayName() + " fert pre " + Nval)
+	If(Nval > self.OptFertilityDays)
+		;; reset the period if this actor is over a cycle.
+		Nval = Nval - (Math.Floor(Nval / self.OptFertilityDays) * self.OptFertilityDays)
+	EndIf
+	self.PrintDebug(Who.GetDisplayName() + " fert post " + Nval)
+
+	;; update our fertile value.
+	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Fertility")
+	StorageUtil.SetFloatValue(who,"SGO.Actor.Data.Fertility",Nval)
+
+	;; todo: immersive messages comparing fval and nval.
+
+	;; todo: more research on blood splattering actors. i seem to be able to
+	;; splatter everything except the actor. the lol was gonna be bleeding on
+	;; people while sexing while at the low point of the fertility cycle.
+	;; who.PlayImpactEffect(Game.GetFormFromFile(0xF457B,"Skyrim.esm") as ImpactDataSet,"SchlongMagic",0.0,0.0,1.0,0.0)
+
 	Return
 EndFunction
 
@@ -1190,7 +1280,7 @@ EndFunction
                                           
 *****************************************************************************/;
 
-Function ActorGemAdd(Actor Who, Float Value=0.0)
+Bool Function ActorGemAdd(Actor Who, Float Value=0.0)
 {add another gem to this actor's pipeline.}
 
 	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") < self.ActorGemGetCapacity(Who))
@@ -1198,9 +1288,10 @@ Function ActorGemAdd(Actor Who, Float Value=0.0)
 		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem") + ")")	
 		self.ActorTrackForGems(Who,TRUE)
 		self.ActorTrackForMilk(Who,TRUE)
+		Return TRUE
 	EndIf
 
-	Return
+	Return FALSE
 EndFunction
 
 Function ActorGemGiveTo(Actor Source, Actor Dest, Int Count=1)
@@ -1240,10 +1331,11 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 	Return
 EndFunction
 
-Form Function ActorGemRemove(Actor Who)
+Form Function ActorGemRemove(Actor Who, Int ValueOfGem=-1)
 {remove the next gem from the specified actor. returns a form describing
 what object we should spawn in the world. this will be used mostly by the
-gem place and gem give functions.}
+gem place and gem give functions. if the value is provided it will only
+remove the gem if it is that.}
 
 	If(self.ActorGemGetCount(Who) == 0)
 		;; an empty form if no gems.
@@ -2492,6 +2584,7 @@ Function MenuActorOptions_Construct(Actor Who)
 	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable)
 	self.MenuWheelSetItem(1,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 	self.MenuWheelSetItem(2,ItemInseminateLabel,ItemInseminateText,ItemInseminateEnable)
+	self.MenuWheelSetItem(4,"F: x" + self.ActorFertilityGetMod(Who) + "","This actor's fertility modifier.",FALSE)
 	self.MenuWheelSetItem(7,"[Main Menu]","Back to main menu.",TRUE)
 
 	Return
