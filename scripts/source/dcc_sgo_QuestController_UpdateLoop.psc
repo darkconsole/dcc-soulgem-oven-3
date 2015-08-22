@@ -15,6 +15,7 @@ dcc_sgo_QuestController Property SGO Auto
 
 Event OnUpdate()
 	SGO.ActorFertilityUpdateData(SGO.Player)
+
 	self.OnUpdate_GemData()
 	self.OnUpdate_MilkData()
 	self.OnUpdate_SemenData()

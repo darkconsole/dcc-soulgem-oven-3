@@ -186,10 +186,19 @@ Spell Property dcc_sgo_SpellMenuMain Auto
 {the spell to trigger the main menu.}
 
 Spell Property dcc_sgo_SpellInflate Auto
-{the cum inflation spell}
+{the cum inflation effect.}
+
+Spell Property dcc_sgo_SpellDeflate Auto
+{the cum deflation effect.}
+
+Spell Property dcc_sgo_SpellDeflateTrigger Auto
+{manual trigger for deflation.}
 
 ImageSpaceModifier Property dcc_sgo_ImodMenu Auto
 {to tint the screen the classic sgo shade of purple on menus.}
+
+Armor Property dcc_sgo_ArmorSquirtingCum Auto
+{fx object for squirting.}
 
 ;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -214,13 +223,25 @@ Float Property OptSemenProduceTime = 12.0 Auto Hidden
 Int Property OptSemenMaxCapacity = 2 Auto Hidden
 {how many bottles of semen can be carried at a time.}
 
-Float Property OptScaleBellyMax = 4.0 Auto Hidden
+Float Property OptScaleBellyCum = 2.0 Auto Hidden
+{how much to scale with cum inflation.}
+
+FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden
+{the value that tweaks the curve for bellies.}
+
+Float Property OptScaleBellyMax = 5.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastMax = 1.5 Auto Hidden
+Float Property OptScaleBreastCurve = 1.5 Auto Hidden
+{the value that tweaks the curve for breasts.}
+
+Float Property OptScaleBreastMax = 2.0 Auto Hidden
 {the maximum size of the breasts when filled up.}
 
-Float Property OptScaleTesticleMax = 1.0 Auto Hidden
+Float Property OptScaleTesticleCurve = 1.25 Auto Hidden
+{the value that scales the curve for testicles.}
+
+Float Property OptScaleTesticleMax = 2.0 Auto Hidden
 {the maximum size of the testicles when filled up.}
 
 Int Property OptPregChanceHumanoid = 50 Auto Hidden
@@ -241,11 +262,24 @@ Float Property OptProgressAlchFactor = 1.0 Auto Hidden
 Float Property OptProgressEnchFactor = 1.0 Auto Hidden
 {how fast enchanting should level by birthing.}
 
-Bool Property OptFertility = TRUE Auto Hidden
-Float Property OptFertilityWindow = 2.0 Auto Hidden
 Int Property OptFertilityDays = 28 Auto Hidden
+{how many days for a complete cycle. 0 to disable fertility.}
+
+Bool Property OptFertility = TRUE Auto Hidden
+{if to enable fertility multiplier or not.}
+
+Float Property OptFertilityWindow = 2.0 Auto Hidden
+{this is how wide the fertility is. 2.0 = twice as likely.}
+
 Bool Property OptFertilitySync = FALSE Auto Hidden
-Bool Property OptFertilityMult = TRUE Auto Hidden
+{if followers should sync their values. there is no code to support this. it was
+a feature of SGO2 that I am thinking of ignoring for performance.}
+
+Bool Property OptCumInflation = TRUE Auto Hidden
+{if to enable cum inflation or not.}
+
+Bool Property OptCumInflationHold = TRUE Auto Hidden
+{if cum should be held in or leaked out.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -320,16 +354,18 @@ Function ResetMod_Values()
 	self.OptMilkMaxCapacity = 3
 	self.OptSemenProduceTime = 12.0
 	self.OptSemenMaxCapacity = 2
-	self.OptScaleBellyMax = 4.0
-	self.OptScaleBreastMax = 1.5
-	self.OptScaleTesticleMax = 1.0
+	self.OptScaleBellyCurve = 1.75
+	self.OptScaleBellyMax = 5.0
+	self.OptScaleBreastCurve = 1.50
+	self.OptScaleBreastMax = 2.0
+	self.OptScaleTesticleCurve = 1.25
+	self.OptScaleTesticleMax = 2.0
 	self.OptProgressEnchFactor = 1.0
 	self.OptProgressAlchFactor = 1.0
-	self.OptFertility = True
+	self.OptFertility = TRUE
 	self.OptFertilityWindow = 2.0
 	self.OptFertilityDays = 28
 	self.OptFertilitySync = FALSE
-	self.OptFertilityMult = True
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
@@ -434,7 +470,7 @@ Int Function GetGemValue(Form What)
 	Return (Value + 1)
 EndFunction
 
-Float Function GetLeveledValue(Float level, Float value, Float factor = 1.0)
+Float Function GetLeveledValue(Float Level, Float Value, Float Factor = 1.0)
 {modify a value based on a level 100 system. this means at level 100 the input
 value will be doubled.}
 	
@@ -451,6 +487,75 @@ value will be doubled.}
 	;; ((100 / 100) * 1) + 1 = 2.0
 
 	Return (((level / 100.0) * (value * factor)) + value) as Float
+EndFunction
+
+Float Function BoneCurveValue(Actor Who, String Bone, Float Value)
+{curve the given Value based on the actors current value and the curve.}
+
+	Float Curve = 2.0
+
+	If(Bone == "NPC Belly")
+		Curve = self.OptScaleBellyCurve
+	ElseIf(Bone == "NPC L Breast" || Bone == "NPC R Breast")
+		Curve = self.OptScaleBreastCurve
+	ElseIf(Bone == "NPC GenitalsScrotum [GenScrot]")
+		Curve = self.OptScaleTesticleCurve
+	EndIf
+
+	If(Curve == 2.0)
+		;; the math works out such that 2.0 is no curving so skip the math.
+		Return Value
+	EndIf
+
+	;; http://i.imgur.com/tHUAaME.png
+	;; this curve was designed to accelerate visual response at lower scalings
+	;; while dampening it at higher scalings to provide a more consistant
+	;; feeling of volume, however it has curve pairity at 2.0 for all settings.
+	;; curve of 2.0 = no curve. reasonable minimum is 0.5.
+	;; Return Math.Sqrt(Math.Pow((Value - 1),Curve)) + 1
+
+	;; http://i.imgur.com/Ylelmrr.png
+	;; this curve lessens the ramp-up of the values and dampens sooner than
+	;; the previous curve. curve of 2.0 = no curve. reasonable minimum is 1.0.
+	;; belly - max 5.0 curve 1.75 1.75 = ~4 @ 5.0
+	;; breast - max 2.0 curve 1.5 = ~1.75 @ 2.0
+	;; testicle - max 2.0 curve 1.25 
+	Return (Math.Sqrt(Math.Pow((Value - 1),Curve)) * (Curve / 2)) + 1
+EndFunction
+
+Bool Function BoneHasScale(Actor Who, String Bone, String ModKey)
+{wrap nioverride, test if a bone scale exists.}
+
+	Return NiOverride.HasNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+EndFunction
+
+Float Function BoneGetScale(Actor Who, String Bone, String ModKey)
+{wrap nioverride, get a bone scale.}
+
+	Float Value = NiOverride.GetNodeTransformScale((Who as ObjectReference),False,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+
+	If(Value != 0.0)
+		Return Value
+	Else
+		Return 1.0
+	EndIf
+EndFunction
+
+Function BoneSetScale(Actor Who, String Bone, String ModKey, Float Value)
+{wrap nioverride, set a bone scale.}
+
+	If(Value != 1.0)
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey,self.BoneCurveValue(Who,Bone,Value))
+	Else
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+	EndIf
+
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone)
+
+	;;self.PrintDebug(Bone + " NiO: " + self.BoneGetScale(Who,Bone,ModKey))
+	;;self.PrintDebug(Bone + " NetImm: " + NetImmerse.GetNodeScale((Who as ObjectReference),"NPC Belly",FALSE))
+
+	Return
 EndFunction
 
 ;/*****************************************************************************
@@ -942,9 +1047,14 @@ Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
 
 	;; 1 2 3... 27 28 0 1 2 3...
 
-	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Fertility")
+	If(!self.OptFertility)
+		;; no need to process if disabled.
+		Return
+	EndIf
 
+	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Fertility")
 	If(Time < 1.0 && !Force)
+		;; no need to process if too soon.
 		Return
 	EndIf
 
@@ -1181,11 +1291,6 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
 	Float Belly = self.ActorModGetTotal(Who,"ScaleBelly")
-	Bool Female = (Who.GetActorBase().GetSex() == 1)
-
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
-
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
 
 	;; with a max of six gems, max of 300% more visual
@@ -1195,18 +1300,8 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
 	Belly = ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.OptGemMaxCapacity)) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
-	self.PrintDebug(Who.GetDisplayName() + " Belly Scale " + Belly)
 
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
-
-	If(Belly == 1.0)
-		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale")
-	Else
-		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC Belly","SGO.Scale",Belly)
-	EndIf
-
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC Belly")
+	self.BoneSetScale(Who,"NPC Belly","SGO.Scale",Belly)
 	Return
 EndFunction
 
@@ -1214,31 +1309,15 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 {handle the physical representation of the breasts.}
 	
 	Float Breast = self.ActorModGetTotal(Who,"ScaleBreast")
-	Bool Female = (Who.GetActorBase().GetSex() == 1)
-
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
 
 	;; with a max of 3 bottles, max of 200% more visual
 	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
 	Breast += ((self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * (self.OptScaleBreastMax + self.ActorModGetTotal(Who,"ScaleBreastMax"))) + 1
-	self.PrintDebug(Who.GetDisplayName() + " Breast Scale " + Breast)
 
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
-
-	If(Breast == 1.0)
-		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC L Breast","SGO.Scale")
-		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC R Breast","SGO.Scale")
-	Else
-		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC L Breast","SGO.Scale",Breast)
-		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC R Breast","SGO.Scale",Breast)
-	EndIf
-
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC L Breast")
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC R Breast")
+	self.BoneSetScale(Who,"NPC L Breast","SGO.Scale",Breast)
+	self.BoneSetScale(Who,"NPC R Breast","SGO.Scale",Breast)
 	Return
 EndFunction
 
@@ -1246,28 +1325,14 @@ Function ActorBodyUpdate_TesticleScale(Actor Who)
 {handle the physical representation of the breasts.}
 	
 	Float Testicle = self.ActorModGetTotal(Who,"ScaleTesticle")
-	Bool Female = (Who.GetActorBase().GetSex() == 1)
-
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
 
 	;; with a max of 2 bottles, max of 200% more visual
 	;; 0 semen ((0 / 2) * 2.0) + 1 == 1.0
 	;; 2 semen ((2 / 2) * 2.0) + 1 == 3.0
 
 	Testicle += ((self.ActorSemenGetWeight(Who) / self.OptSemenMaxCapacity) * (self.OptScaleTesticleMax + self.ActorModGetTotal(Who,"ScaleTesticleMax"))) + 1
-	self.PrintDebug(Who.GetDisplayName() + " Testicle Scale " + Testicle)
 
-	;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;
-
-	If(Testicle == 1.0)
-		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]","SGO.Scale")
-	Else
-		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]","SGO.Scale",Testicle)
-	EndIf
-
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,Female,"NPC GenitalsScrotum [GenScrot]")
+	self.BoneSetScale(Who,"NPC GenitalsScrotum [GenScrot]","SGO.Scale",Testicle)
 	Return
 EndFunction
 

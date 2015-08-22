@@ -1,47 +1,48 @@
 Scriptname dcc_sgo_EffectInflate_Main extends ActiveMagicEffect
+{this script is responsible for expanding the belly for cum inflation.}
 
 dcc_sgo_QuestController Property SGO Auto
 
-Float Property Value Auto Hidden
-Bool Property Up Auto Hidden
-Bool Property Female Auto Hidden
 Actor Property Who Auto Hidden
+Float Property Value Auto Hidden
+Float Property ValueMax Auto Hidden
+Bool  Property Done Auto Hidden
 
 Event OnEffectStart(Actor Target, Actor From)
 	self.Who = Target
 	self.Value = 1.0
-	self.Up = TRUE
-	self.Female = (Target.GetActorBase().GetSex() == 1)
+	self.ValueMax = SGO.OptScaleBellyCum
+	self.Done = FALSE
+
+	;; if we were told to hold it then we will keep adding to it for the lulz.
+	If(SGO.OptCumInflationHold)
+		self.Value = SGO.BoneGetScale(Target,"NPC Belly","SGO.Inflate")
+		self.ValueMax += (self.Value - 1)
+	EndIf
+
 	self.OnUpdate()
 	Return
 EndEvent
 
 Event OnUpdate()
-
-	If(self.Up)
-		self.Value += 0.01
-		If(self.Value >= 2.0)
-			self.Value = 2.0
-			self.Up = FALSE
-			Utility.Wait(2.0)
-		EndIf
-	Else
-		self.Value -= 0.005
-		If(self.Value <= 1.0)
-			self.Value = 1.0
-		EndIf
+	self.Value += 0.02
+	If(self.Value >= self.ValueMax)
+		self.Value = self.ValueMax
+		self.Done = TRUE
 	EndIf
 
-	;;SGO.PrintDebug(self.Who.GetDisplayName() + " inflate " + self.Value)
-	NiOverride.AddNodeTransformScale((self.Who as ObjectReference),FALSE,self.Female,"NPC Belly","SGO.Inflate",self.Value)
-	NiOverride.UpdateNodeTransform((self.Who as ObjectReference),FALSE,self.Female,"NPC Belly")
+	SGO.BoneSetScale(self.Who,"NPC Belly","SGO.Inflate",self.Value)
 
-	If(self.Value > 1.0)
-		Utility.Wait(0.01)
-		self.OnUpdate()
+	If(!self.Done)
+		self.RegisterForSingleUpdate(0.01)
 	Else
-		NiOverride.RemoveNodeTransformScale(self.Who,FALSE,self.Female,"NPC Belly","SGO.Inflate")
 		self.Who.RemoveSpell(SGO.dcc_sgo_SpellInflate)
+
+		If(SGO.OptCumInflationHold)
+			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflateTrigger)
+		Else
+			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflate,TRUE)
+		EndIf
 	EndIf
 
 	Return
