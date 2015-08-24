@@ -2148,6 +2148,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 
 	If(self.ActorGemGetCount(Dest) >= self.OptGemMaxCapacity)
 		self.Print(Dest.GetDisplayName() + " cannot fit anymore gems.")
+		Return
 	EndIf
 
 	If(self.ActorGemRemoveFromInventory(Source,Size) == None)
