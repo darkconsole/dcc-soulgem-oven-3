@@ -182,17 +182,20 @@ FormList Property dcc_sgo_ListGemFragment Auto
 Package Property dcc_sgo_PackageDoNothing Auto
 {a package to force an actor to do nothing.}
 
-Spell Property dcc_sgo_SpellMenuMain Auto
-{the spell to trigger the main menu.}
-
-Spell Property dcc_sgo_SpellInflate Auto
-{the cum inflation effect.}
+Spell Property dcc_sgo_SpellBreastInfluence Auto
+{spell that increases barter ability with boob size.}
 
 Spell Property dcc_sgo_SpellDeflate Auto
 {the cum deflation effect.}
 
 Spell Property dcc_sgo_SpellDeflateTrigger Auto
 {manual trigger for deflation.}
+
+Spell Property dcc_sgo_SpellInflate Auto
+{the cum inflation effect.}
+
+Spell Property dcc_sgo_SpellMenuMain Auto
+{the spell to trigger the main menu.}
 
 ImageSpaceModifier Property dcc_sgo_ImodMenu Auto
 {to tint the screen the classic sgo shade of purple on menus.}
@@ -1099,6 +1102,19 @@ Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
 	Return
 EndFunction
 
+Function ActorApplyBreastInfluence(Actor Who)
+{this function will re-calculate the breast influence for barter and refresh it
+when needed.}
+
+	Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
+
+	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0, (self.ActorMilkGetPercent(Who)/4) )
+
+	Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
+
+	Return
+EndFunction
+
 ;/*****************************************************************************
              __                              __                       __       
  .---.-.----|  |_.-----.----.   .--.--.---.-|  |   .--------.-----.--|  .-----.
@@ -1734,7 +1750,8 @@ Float Function ActorMilkGetTime(Actor Who)
 EndFunction
 
 Float Function ActorMilkGetPercent(Actor Who)
-{find the current mik percentage of fullness.}
+{find the current mik percentage of fullness. returns a float between 0 and
+100.}
 
 	Return (self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * 100
 EndFunction
@@ -1782,16 +1799,20 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Milk",Milk)
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Milk")
+	self.ActorBodyUpdate_BreastScale(Who)
 
 	;;;;;;;;
 	;;;;;;;;
+
+	If(Milk / Capacity >= 0.5)
+		self.ActorApplyBreastInfluence(Who)
+	EndIF
 
 	If(Before as Int < Milk as Int)
 		self.Immersive_OnMilkProgress(Who)
 		self.EventSendMilkProgress(Who,(Milk as Int))
 	EndIf
 
-	self.ActorBodyUpdate_BreastScale(Who)
 	Return
 EndFunction
 
