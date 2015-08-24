@@ -294,10 +294,11 @@ Float Property OptUpdateDelay = 0.125 Auto Hidden
 
 ;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Int Property BioProduceGems = 1 AutoReadOnly
-Int Property BioProduceMilk = 2 AutoReadOnly
-Int Property BioInseminate  = 4 AutoReadOnly
-Int Property BioIsBeast     = 8 AutoReadOnly
+Int Property BioProduceGems = 1  AutoReadOnly
+Int Property BioProduceMilk = 2  AutoReadOnly
+Int Property BioInseminate  = 4  AutoReadOnly
+Int Property BioIsBeast     = 8  AutoReadOnly
+Int Property BioInflate     = 16 AutoReadOnly
 
 ;/*****************************************************************************
                      __                      __              __ 
@@ -758,9 +759,13 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 			self.PrintDebug("Preg Chance Fail for " + ActorList[x].GetDisplayName())
 		EndIf
 
-		If(Preg && Math.LogicalAnd(ActorBio[x],self.BioProduceGems) > 0)
-			self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
-			self.ActorGemAdd(ActorList[x])
+		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) > 0)
+			If(Preg)
+				self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
+				self.ActorGemAdd(ActorList[x])
+			EndIf
+
+			ActorList[x].AddSpell(self.dcc_sgo_SpellInflate)
 		EndIf
 
 		x += 1
@@ -1075,12 +1080,10 @@ Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
 	;;	EndIf
 	;;EndIf
 
-	self.PrintDebug(Who.GetDisplayName() + " fert pre " + Nval)
 	If(Nval > self.OptFertilityDays)
 		;; reset the period if this actor is over a cycle.
 		Nval = Nval - (Math.Floor(Nval / self.OptFertilityDays) * self.OptFertilityDays)
 	EndIf
-	self.PrintDebug(Who.GetDisplayName() + " fert post " + Nval)
 
 	;; update our fertile value.
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Fertility")
@@ -2142,6 +2145,10 @@ EndFunction
 
 Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 {gem insertion sequence.}
+
+	If(self.ActorGemGetCount(Dest) >= self.OptGemMaxCapacity)
+		self.Print(Dest.GetDisplayName() + " cannot fit anymore gems.")
+	EndIf
 
 	If(self.ActorGemRemoveFromInventory(Source,Size) == None)
 		self.Print(Source.GetDisplayName() + " has none of those gems to use.")
