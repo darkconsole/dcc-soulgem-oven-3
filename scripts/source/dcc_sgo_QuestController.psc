@@ -122,9 +122,6 @@ Bool  Property OK = FALSE Auto Hidden
 {this will be set to true if everything this mod needs to run has been found
 and accessible during startup or reset.}
 
-Bool Property HasConsoleUtil = FALSE Auto Hidden
-{sentinel value for knowing if we had cu.}
-
 ;; scripts n stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Actor Property Player Auto
@@ -181,6 +178,9 @@ FormList Property dcc_sgo_ListGemFragment Auto
 
 Package Property dcc_sgo_PackageDoNothing Auto
 {a package to force an actor to do nothing.}
+
+Spell Property dcc_sgo_SpellBellyEncumber Auto
+{spell that emcumbers you with belly size.}
 
 Spell Property dcc_sgo_SpellBreastInfluence Auto
 {spell that increases barter ability with boob size.}
@@ -343,7 +343,6 @@ Function ResetMod_Prepare()
 		Return
 	EndIf
 
-	self.HasConsoleUtil = self.IsConsoleUtilInstalled(FALSE)
 	self.OK = TRUE
 	Return
 EndFunction
@@ -617,43 +616,11 @@ can basically promise it will be there. we need to make sure that shlongs of
 skyrim though didn't fuck it up again with an older version, that will break
 the use of AdjustFloatValue and the like.}
 
-	If(PapyrusUtil.GetVersion() < 28)
+	If(PapyrusUtil.GetVersion() < 30)
 		If(Popup)
-			Debug.MessageBox("Your PapyrusUtil is too old or has been overwritten by something like SOS. Install PapyrusUtil 2.8 from Nexus and make sure it dominates the load order.")
+			Debug.MessageBox("Your PapyrusUtil is too old or has been overwritten by something like SOS. Install PapyrusUtil 3.0 from LoversLab and make sure it dominates the load order.")
 		EndIf
 		Return FALSE
-	EndIf
-
-	Return TRUE
-EndFunction
-
-Bool Function IsConsoleUtilInstalled(Bool Popup=TRUE)
-{make sure console util is installed. currently this mod does not require
-consoleutil, so it is optional.}
-
-	If(SKSE.GetPluginVersion("ConsoleUtil") == -1)
-		self.PrintDebug("Not ConsoleUtil")
-	EndIf
-
-	If(SKSE.GetPluginVersion("ConsolePlugin") == -1)
-		self.PrintDebug("Not ConsolePlugin")
-	EndIf
-
-	If(SKSE.GetPluginVersion("ConsolePlugin.dll") == -1)
-		self.PrintDebug("Not ConsolePlugin.dll")
-	EndIf
-
-	If(SKSE.GetPluginVersion("ConsolePlugin2") == -1)
-		self.PrintDebug("Not ConsolePlugin2")
-	EndIf
-
-	If(SKSE.GetPluginVersion("ConsolePlugin2.dll") == -1)
-		self.PrintDebug("Not ConsolePlugin2.dll")
-	EndIf
-
-	If(SKSE.GetPluginVersion("Console") == -1)
-		self.PrintDebug("Not Console")
-		Return False
 	EndIf
 
 	Return TRUE
@@ -1108,9 +1075,22 @@ when needed.}
 
 	Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
 
-	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0, (self.ActorMilkGetPercent(Who)/4) )
+	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,(self.ActorMilkGetPercent(Who) / 4))
 
 	Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
+
+	Return
+EndFunction
+
+Function ActorApplyBellyEncumber(Actor Who)
+{this function will re-calculate the belly encumberment and refresh it when
+needed.}
+
+	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+
+	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,((self.ActorGemGetPercent(Who) / 4) * -1))
+
+	Who.AddSpell(self.dcc_sgo_SpellBellyEncumber,FALSE)
 
 	Return
 EndFunction
@@ -1603,6 +1583,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
+	Float Total = 0.0
 
 	;; stop processing actors that don't need it.
 	If(Count == 0)
@@ -1612,6 +1593,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	Float Gem
 	Float Before
 	Int x = 0
+
 	While(x < Count)
 		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Data.Gem",x)
 		Before = Gem
@@ -1623,16 +1605,10 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		;; if mature time = 144hr (6d), processed once an hour
 		;; (1 / 144) * 6 = 0.0416/hr * 24 = 1 = one level per day = right
 
-		Gem += ((Time / self.ActorGemGetTime(Who)) * 6)
-		If(Gem > 12)
-			Gem = 12
-		EndIf
+		Gem += PapyrusUtil.ClampFloat(((Time / self.ActorGemGetTime(Who)) * 6),0.0,6.0)
 
-		If(Gem <= 6)
-			Progress[Gem as Int] = Progress[Gem as Int] + 1
-		Else
-			Progress[6] = Progress[6] + 1
-		EndIf
+		Progress[Gem as Int] = Progress[Gem as Int] + 1
+		Total += Gem
 
 		If(Before as Int < Gem as Int)
 			;; if the gem reached the next stage then mark it down
@@ -1643,10 +1619,16 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		StorageUtil.FloatListSet(Who,"SGO.Actor.Data.Gem",x,Gem)
 		x += 1
 	EndWhile
+
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Gem")
+	self.ActorBodyUpdate_BellyScale(Who)
 
 	;;;;;;;;
 	;;;;;;;;
+
+	If(Total / (self.OptGemMaxCapacity * 6) >= 0.5)
+		self.ActorApplyBellyEncumber(Who)
+	EndIf
 
 	If(Progressed)
 		self.Immersive_OnGemProgress(Who)
@@ -1656,8 +1638,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 			self.Immersive_OnGemFull(Who)
 		EndIf
 	EndIf
-	
-	self.ActorBodyUpdate_BellyScale(Who)
+
 	Return
 EndFunction
 
@@ -2386,10 +2367,6 @@ EndFunction
 Function ImmersiveMenuCamera(Bool Enable)
 {move the camera when the menu opens.}
 
-	If(!self.HasConsoleUtil)
-	;;	Return
-	EndIf
-
 	Int Camera = Game.GetCameraState()
 	If(Camera != 5 && Camera != 8 && Camera != 9 && Camera != 10)
 		self.PrintDebug("not in third person")
@@ -2399,13 +2376,6 @@ Function ImmersiveMenuCamera(Bool Enable)
 	Float CurX = Utility.GetINIFloat("fOverShoulderPosX:Camera")
 	Float CurZ = Utility.GetINIFloat("fOverShoulderPosZ:Camera")
 	Float CurS = Utility.GetINIFLoat("fShoulderDollySpeed:Camera")
-
-	If(Enable)
-		;;ConsoleUtil.ExecuteCommand("fov 40")
-	Else
-		;;ConsoleUtil.ExecuteCommand("fov")
-	EndIf
-	;;Utility.Wait(0.05)
 
 	If(Enable)
 		StorageUtil.SetFloatValue(None,"SGO.Camera.X",CurX)
@@ -2424,7 +2394,6 @@ Function ImmersiveMenuCamera(Bool Enable)
 	EndIf
 
 	Game.UpdateThirdPerson()
-
 	Return
 EndFunction
 
