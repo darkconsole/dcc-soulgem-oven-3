@@ -265,11 +265,11 @@ Float Property OptProgressAlchFactor = 1.0 Auto Hidden
 Float Property OptProgressEnchFactor = 1.0 Auto Hidden
 {how fast enchanting should level by birthing.}
 
-Int Property OptFertilityDays = 28 Auto Hidden
-{how many days for a complete cycle. 0 to disable fertility.}
-
 Bool Property OptFertility = TRUE Auto Hidden
 {if to enable fertility multiplier or not.}
+
+Int Property OptFertilityDays = 28 Auto Hidden
+{how many days for a complete cycle. 0 to disable fertility.}
 
 Float Property OptFertilityWindow = 2.0 Auto Hidden
 {this is how wide the fertility is. 2.0 = twice as likely.}
@@ -283,6 +283,12 @@ Bool Property OptCumInflation = TRUE Auto Hidden
 
 Bool Property OptCumInflationHold = TRUE Auto Hidden
 {if cum should be held in or leaked out.}
+
+Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
+{if the breast influence buff/debuffs should be applied.}
+
+Bool Property OptEffectBellyEncumber = TRUE Auto Hidden
+{if the belly encumberment buff/debuff should be applied.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -369,6 +375,10 @@ Function ResetMod_Values()
 	self.OptFertilityWindow = 2.0
 	self.OptFertilityDays = 28
 	self.OptFertilitySync = FALSE
+	self.OptCumInflation = TRUE
+	self.OptCumInflationHold = FALSE
+	self.OptEffectBreastInfluence = TRUE
+	self.OptEffectBellyEncumber = TRUE
 	self.OptPregChanceHumanoid = 75
 	self.OptPregChanceBeast = 10
 	self.OptImmersivePlayer = TRUE
@@ -1075,6 +1085,11 @@ when needed.}
 
 	Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
 
+	If(!self.OptEffectBreastInfluence)
+		;; allow the above to clean up but not progress if disabled.
+		Return
+	EndIf
+
 	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,(self.ActorMilkGetPercent(Who) / 4))
 
 	Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
@@ -1087,6 +1102,11 @@ Function ActorApplyBellyEncumber(Actor Who)
 needed.}
 
 	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+
+	If(!self.OptEffectBellyEncumber)
+		;; allow the above to clean up but not progress if disabled.
+		Return
+	EndIf
 
 	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,((self.ActorGemGetPercent(Who) / 4) * -1))
 
