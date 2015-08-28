@@ -118,24 +118,26 @@ Scriptname dcc_sgo_QuestController extends Quest
 
 *****************************************************************************/;
 
-Bool  Property OK = FALSE Auto Hidden
+Bool Property OK = FALSE Auto Hidden
 {this will be set to true if everything this mod needs to run has been found
 and accessible during startup or reset.}
-
-;; scripts n stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Actor Property Player Auto
 {maintain a pointer to player. set via ck.}
 
-dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
-{the script that will handle the update queue. set via ck.}
-
 SexLabFramework Property SexLab Auto Hidden
 {the sexlab framework scripting. it will be set by the dependency checker.}
 
-;; vanilla forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;/*****************************************************************************
+                    __      ___                           
+ .--------.-----.--|  |   .'  _.-----.----.--------.-----.
+ |        |  _  |  _  |   |   _|  _  |   _|        |__ --|
+ |__|__|__|_____|_____|   |__| |_____|__| |__|__|__|_____|
 
-;; mod forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+*****************************************************************************/;
+
+dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
+{the script that will handle the update queue. set via ck.}
 
 Perk Property dcc_sgo_PerkCannotProduceGems Auto
 {prevent an actor from producing gems if it normally could.}
@@ -203,7 +205,16 @@ ImageSpaceModifier Property dcc_sgo_ImodMenu Auto
 Armor Property dcc_sgo_ArmorSquirtingCum Auto
 {fx object for squirting.}
 
-;; gameplay options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;/*****************************************************************************
+                    __                       ___ __       
+ .--------.-----.--|  |   .----.-----.-----.'  _|__.-----.
+ |        |  _  |  _  |   |  __|  _  |     |   _|  |  _  |
+ |__|__|__|_____|_____|   |____|_____|__|__|__| |__|___  |
+                                                   |_____|
+
+*****************************************************************************/;
+
+;; gem options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptGemMatureTime = 144.0 Auto Hidden
 {how many hours for a gem to mature. default 144 = 6 days.}
@@ -214,6 +225,8 @@ Int Property OptGemMaxCapacity = 6 Auto Hidden
 Bool Property OptGemFilled = TRUE Auto Hidden
 {if we should give filled gems or empty gems.}
 
+;; milk options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 Float Property OptMilkProduceTime = 8.0 Auto Hidden
 {how many hours for milk to produce. default 8 = 3 per day.}
 
@@ -223,8 +236,12 @@ Int Property OptMilkMaxCapacity = 3 Auto Hidden
 Float Property OptSemenProduceTime = 12.0 Auto Hidden
 {how many hours for semen to produce.}
 
+;; semen options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 Int Property OptSemenMaxCapacity = 2 Auto Hidden
 {how many bottles of semen can be carried at a time.}
+
+;; body scaling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptScaleBellyCum = 2.0 Auto Hidden
 {how much to scale with cum inflation.}
@@ -247,23 +264,13 @@ Float Property OptScaleTesticleCurve = 1.25 Auto Hidden
 Float Property OptScaleTesticleMax = 2.0 Auto Hidden
 {the maximum size of the testicles when filled up.}
 
+;; pregnancy options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 Int Property OptPregChanceHumanoid = 50 Auto Hidden
 {preg chance on encounters with people.}
 
 Int Property OptPregChanceBeast = 10 Auto Hidden
 {preg chance on encounters with beasts.}
-
-Bool Property OptImmersivePlayer = TRUE Auto Hidden
-{if we should show messages about the player state.}
-
-Bool Property OptImmersiveNPC = TRUE Auto Hidden
-{if we should show messages about npc states.}
-
-Float Property OptProgressAlchFactor = 1.0 Auto Hidden
-{how fast alchemy should level by milking.}
-
-Float Property OptProgressEnchFactor = 1.0 Auto Hidden
-{how fast enchanting should level by birthing.}
 
 Bool Property OptFertility = TRUE Auto Hidden
 {if to enable fertility multiplier or not.}
@@ -274,15 +281,13 @@ Int Property OptFertilityDays = 28 Auto Hidden
 Float Property OptFertilityWindow = 2.0 Auto Hidden
 {this is how wide the fertility is. 2.0 = twice as likely.}
 
-Bool Property OptFertilitySync = FALSE Auto Hidden
-{if followers should sync their values. there is no code to support this. it was
-a feature of SGO2 that I am thinking of ignoring for performance.}
+;; immersion options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool Property OptCumInflation = TRUE Auto Hidden
-{if to enable cum inflation or not.}
+Bool Property OptImmersivePlayer = TRUE Auto Hidden
+{if we should show messages about the player state.}
 
-Bool Property OptCumInflationHold = TRUE Auto Hidden
-{if cum should be held in or leaked out.}
+Bool Property OptImmersiveNPC = TRUE Auto Hidden
+{if we should show messages about npc states.}
 
 Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
 {if the breast influence buff/debuffs should be applied.}
@@ -290,7 +295,21 @@ Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
 Bool Property OptEffectBellyEncumber = TRUE Auto Hidden
 {if the belly encumberment buff/debuff should be applied.}
 
-;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Bool Property OptCumInflation = TRUE Auto Hidden
+{if to enable cum inflation or not.}
+
+Bool Property OptCumInflationHold = TRUE Auto Hidden
+{if cum should be held in or leaked out.}
+
+;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Float Property OptProgressAlchFactor = 1.0 Auto Hidden
+{how fast alchemy should level by milking.}
+
+Float Property OptProgressEnchFactor = 1.0 Auto Hidden
+{how fast enchanting should level by birthing.}
+
+;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Bool  Property OptDebug = TRUE Auto Hidden
 {print debugging information out to the console}
@@ -301,7 +320,7 @@ Float Property OptUpdateInterval = 20.0 Auto Hidden
 Float Property OptUpdateDelay = 0.125 Auto Hidden
 {how long to delay the update loop each iteration.}
 
-;; Constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Int Property BioProduceGems = 1  AutoReadOnly
 Int Property BioProduceMilk = 2  AutoReadOnly
@@ -374,7 +393,6 @@ Function ResetMod_Values()
 	self.OptFertility = TRUE
 	self.OptFertilityWindow = 2.0
 	self.OptFertilityDays = 28
-	self.OptFertilitySync = FALSE
 	self.OptCumInflation = TRUE
 	self.OptCumInflationHold = FALSE
 	self.OptEffectBreastInfluence = TRUE
@@ -416,6 +434,22 @@ Function ResetMod_Events()
 	Return
 EndFunction
 
+;/*****************************************************************************
+        __   __ __ __ __              ___                  
+ .--.--|  |_|__|  |__|  |_.--.--.   .'  _.--.--.-----.----.
+ |  |  |   _|  |  |  |   _|  |  |   |   _|  |  |     |  __|
+ |_____|____|__|__|__|____|___  |   |__| |_____|__|__|____|
+                          |_____|                          
+                                                           
+*****************************************************************************/;
+
+String Function ChooseRandomString(String[] What)
+{given an array choose a random string from it. we will use this for things
+like printing random messages or choosing random animations.}
+	
+	Return What[Utility.RandomInt(0,(What.Length - 1))]
+EndFunction
+
 Function Print(String Msg)
 {send a message to the notification area.}
 
@@ -434,14 +468,12 @@ Function PrintDebug(String Msg)
 	Return
 EndFunction
 
-;/*****************************************************************************
-        __   __ __ __ __              ___                  
- .--.--|  |_|__|  |__|  |_.--.--.   .'  _.--.--.-----.----.
- |  |  |   _|  |  |  |   _|  |  |   |   _|  |  |     |  __|
- |_____|____|__|__|__|____|___  |   |__| |_____|__|__|____|
-                          |_____|                          
-                                                           
-*****************************************************************************/;
+Function PrintRandom(String[] MsgList)
+{print a random one of the strings from a given array.}
+
+	self.Print(self.ChooseRandomString(MsgList))
+	Return
+EndFunction
 
 String Function GetGemName(Float Value)
 {based on the gem value, return its short name. doing it here for intl later.}
@@ -501,6 +533,8 @@ value will be doubled.}
 
 	Return (((level / 100.0) * (value * factor)) + value) as Float
 EndFunction
+
+;; skeleton manipulation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Function BoneCurveValue(Actor Who, String Bone, Float Value)
 {curve the given Value based on the actors current value and the curve.}
@@ -1060,10 +1094,11 @@ Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
 	;;	EndIf
 	;;EndIf
 
-	If(Nval > self.OptFertilityDays)
+	;;If(Nval > self.OptFertilityDays)
 		;; reset the period if this actor is over a cycle.
-		Nval = Nval - (Math.Floor(Nval / self.OptFertilityDays) * self.OptFertilityDays)
-	EndIf
+	;;	Nval = Nval - (Math.Floor(Nval / self.OptFertilityDays) * self.OptFertilityDays)
+	;;EndIf
+	PapyrusUtil.WrapFloat(Nval,self.OptFertilityDays,1.0)
 
 	;; update our fertile value.
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Fertility")
@@ -1281,7 +1316,12 @@ Function ActorTrackForSemen(Actor Who, Bool Enabled)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",Who,FALSE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Time.Semen")
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Semen")
+
+		;; StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Data.Semen")
+		;; we want to keep the actual data so we can still use it for scale
+		;; computations later. we just want to stop iterating over them every
+		;; loop after they are full.
+
 	EndIf
 
 	Return
@@ -1318,7 +1358,7 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
-	Belly = ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.OptGemMaxCapacity)) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
+	Belly = ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * (self.OptScaleBellyMax + self.ActorModGetTotal(Who,"ScaleBellyMax"))) + 1
 
 	self.BoneSetScale(Who,"NPC Belly","SGO.Scale",Belly)
 	Return
@@ -1550,7 +1590,7 @@ EndFunction
 
 Float Function ActorGemGetPercent(Actor Who)
 
-	Return (self.ActorGemGetWeight(Who,FALSE) / (self.OptGemMaxCapacity * 6)) * 100
+	Return (self.ActorGemGetWeight(Who,FALSE) / (self.ActorGemGetCapacity(Who) * 6)) * 100
 EndFunction
 
 Float Function ActorGemGetWeight(Actor Who, Bool Overflow=FALSE)
@@ -1646,15 +1686,17 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;;;;;;;;
 	;;;;;;;;
 
-	If(Total / (self.OptGemMaxCapacity * 6) >= 0.5)
+	Float Capacity = self.ActorModGetTotal(Who,"GemCapacity")
+
+	If(Total / (Capacity * 6) >= 0.5)
 		self.ActorApplyBellyEncumber(Who)
 	EndIf
 
 	If(Progressed)
-		self.Immersive_OnGemProgress(Who)
+		self.Immersive_OnGemProgress(Who,Progress)
 		self.EventSendGemProgress(Who,Progress)
 	Else
-		If(Progress[6] >= self.ActorModGetTotal(Who,"GemCapacity"))
+		If(Progress[6] >= Capacity)
 			self.Immersive_OnGemFull(Who)
 		EndIf
 	EndIf
@@ -1754,7 +1796,7 @@ Float Function ActorMilkGetPercent(Actor Who)
 {find the current mik percentage of fullness. returns a float between 0 and
 100.}
 
-	Return (self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * 100
+	Return (self.ActorMilkGetWeight(Who) / self.ActorMilkGetCapacity(Who)) * 100
 EndFunction
 
 Float Function ActorMilkGetWeight(Actor Who)
@@ -1977,6 +2019,10 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		self.EventSendSemenProgress(Who,(Semen as Int))
 	EndIf
 
+	If(Semen >= Capacity)
+		self.ActorTrackForSemen(Who,FALSE)
+	EndIf
+
 	self.ActorBodyUpdate_TesticleScale(Who)
 	Return
 EndFunction
@@ -2168,7 +2214,7 @@ EndFunction
 Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 {gem insertion sequence.}
 
-	If(self.ActorGemGetCount(Dest) >= self.OptGemMaxCapacity)
+	If(self.ActorGemGetCount(Dest) >= self.ActorGemGetCapacity(Dest))
 		self.Print(Dest.GetDisplayName() + " cannot fit anymore gems.")
 		Return
 	EndIf
@@ -2215,11 +2261,29 @@ EndFunction
 Function Immersive_OnGemFull(Actor Who)
 {send messages about gem fullness.}
 
+	If(Who == self.Player)
+		String[] Msg = new String[5]
+		Msg[0] = "It feels like all my gems are ready."
+		Msg[1] = "I can tell the gems I carry have hit their max potential."
+		Msg[2] = "My belly feels like it is about to burst."
+		Msg[3] = "Ugh some of these gems have sharp corners."
+		Msg[4] = "If I drop my weapon I'm not sure I could bend down to pick it up again!"
+		self.PrintRandom(Msg)
+	EndIf
+
 	Return
 EndFunction
 
-Function Immersive_OnGemProgress(Actor Who)
+Function Immersive_OnGemProgress(Actor Who, Int[] Progress)
 {send messages about gem progression.}
+
+	If(Who == self.Player)
+		String[] Msg = new String[3]
+		Msg[0] = "You feel another gem has progressed."
+		Msg[1] = "You feel a gem has reached the next stage of development."
+		Msg[2] = "You can tell a gem got a little bigger than earlier."
+		self.PrintRandom(Msg)
+	EndIf
 
 	Return
 EndFunction
@@ -2227,11 +2291,29 @@ EndFunction
 Function Immersive_OnMilkFull(Actor Who)
 {send messages about milk being full.}
 
+	If(Who == self.Player)
+		String[] Msg = new String[7]
+		Msg[0] = "My breasts are sore and ready to burst."
+		Msg[1] = "If my breasts get any fuller they might pop!"
+		Msg[2] = "If my breasts get any larger they are going to need their own Jarl."
+		Msg[4] = "I bet I could get some great deals flashing these milkshakes around."
+		Msg[5] = "My back is sore from supporting these things."
+		Msg[6] = "These things are so full they are dribbling milk."
+		self.PrintRandom(Msg)
+	EndIf
+
 	Return
 EndFunction
 
 Function Immersive_OnMilkProgress(Actor Who)
 {send messages about milk progression.}
+
+	If(Who == self.Player)
+		String[] Msg = new String[2]
+		Msg[0] = "My breasts feel a little heavier."
+		Msg[1] = "My breasts have gotten heavier."
+		self.PrintRandom(Msg)
+	EndIf
 
 	Return
 EndFunction
@@ -2239,11 +2321,25 @@ EndFunction
 Function Immersive_OnSemenFull(Actor Who)
 {send messages about milk being full.}
 
+	If(Who == self.Player)
+		String[] Msg = new String[2]
+		Msg[0] = "My balls ache from being so full."
+		Msg[1] = "My balls are so full it hurts."
+		self.PrintRandom(Msg)
+	EndIf
+
 	Return
 EndFunction
 
 Function Immersive_OnSemenProgress(Actor Who)
 {send messages about milk progression.}
+
+	If(Who == self.Player)
+		String[] Msg = new String[2]
+		Msg[0] = "My balls feel a little heavier"
+		Msg[1] = "I can tell my balls have refilled some."
+		self.PrintRandom(Msg)
+	EndIf
 
 	Return
 EndFunction
