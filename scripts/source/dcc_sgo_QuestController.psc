@@ -515,6 +515,17 @@ Int Function GetGemValue(Form What)
 	Return (Value + 1)
 EndFunction
 
+Int Function GetGemStageCount()
+{count how many things are in the gem list. we will (eventually) use this to
+support dynamic stages depending on if the list has been modified.}
+
+	If(self.OptGemFilled)
+		Return self.dcc_sgo_ListGemFull.GetSize()
+	Else
+		Return self.dcc_sgo_ListGemEmpty.GetSize()
+	EndIf
+EndFunction
+
 Float Function GetLeveledValue(Float Level, Float Value, Float Factor = 1.0)
 {modify a value based on a level 100 system. this means at level 100 the input
 value will be doubled.}
@@ -1098,7 +1109,7 @@ Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
 		;; reset the period if this actor is over a cycle.
 	;;	Nval = Nval - (Math.Floor(Nval / self.OptFertilityDays) * self.OptFertilityDays)
 	;;EndIf
-	PapyrusUtil.WrapFloat(Nval,self.OptFertilityDays,1.0)
+	Nval = PapyrusUtil.WrapFloat(Nval,self.OptFertilityDays,1.0)
 
 	;; update our fertile value.
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Time.Fertility")
@@ -1665,9 +1676,10 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		;; if mature time = 144hr (6d), processed once an hour
 		;; (1 / 144) * 6 = 0.0416/hr * 24 = 1 = one level per day = right
 
-		Gem += PapyrusUtil.ClampFloat(((Time / self.ActorGemGetTime(Who)) * 6),0.0,6.0)
+		Gem += ((Time / self.ActorGemGetTime(Who)) * 6)
+		Gem = PapyrusUtil.ClampFloat(Gem,0.0,12.0)
 
-		Progress[Gem as Int] = Progress[Gem as Int] + 1
+		Progress[PapyrusUtil.ClampInt(Gem as Int,0,6)] = Progress[PapyrusUtil.ClampInt(Gem as Int,0,6)] + 1
 		Total += Gem
 
 		If(Before as Int < Gem as Int)
@@ -1686,7 +1698,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;;;;;;;;
 	;;;;;;;;
 
-	Float Capacity = self.ActorModGetTotal(Who,"GemCapacity")
+	Float Capacity = self.ActorGemGetCapacity(Who)
 
 	If(Total / (Capacity * 6) >= 0.5)
 		self.ActorApplyBellyEncumber(Who)
@@ -2262,12 +2274,13 @@ Function Immersive_OnGemFull(Actor Who)
 {send messages about gem fullness.}
 
 	If(Who == self.Player)
-		String[] Msg = new String[5]
+		String[] Msg = new String[6]
 		Msg[0] = "It feels like all my gems are ready."
 		Msg[1] = "I can tell the gems I carry have hit their max potential."
 		Msg[2] = "My belly feels like it is about to burst."
 		Msg[3] = "Ugh some of these gems have sharp corners."
 		Msg[4] = "If I drop my weapon I'm not sure I could bend down to pick it up again!"
+		Msg[5] = "Ding! Oven's done."
 		self.PrintRandom(Msg)
 	EndIf
 
@@ -2292,13 +2305,15 @@ Function Immersive_OnMilkFull(Actor Who)
 {send messages about milk being full.}
 
 	If(Who == self.Player)
-		String[] Msg = new String[7]
+		String[] Msg = new String[9]
 		Msg[0] = "My breasts are sore and ready to burst."
 		Msg[1] = "If my breasts get any fuller they might pop!"
 		Msg[2] = "If my breasts get any larger they are going to need their own Jarl."
 		Msg[4] = "I bet I could get some great deals flashing these milkshakes around."
 		Msg[5] = "My back is sore from supporting these things."
 		Msg[6] = "These things are so full they are dribbling milk."
+		Msg[7] = "My boobs are so full. I wonder if anyone is thirty?" ;; chajapa
+		Msg[8] = "I think my jugs are full." ;; chajapa
 		self.PrintRandom(Msg)
 	EndIf
 
@@ -2309,9 +2324,10 @@ Function Immersive_OnMilkProgress(Actor Who)
 {send messages about milk progression.}
 
 	If(Who == self.Player)
-		String[] Msg = new String[2]
+		String[] Msg = new String[3]
 		Msg[0] = "My breasts feel a little heavier."
 		Msg[1] = "My breasts have gotten heavier."
+		Msg[2] = "Who needs a cow for milk when I've got these puppies." ;; mm777
 		self.PrintRandom(Msg)
 	EndIf
 
@@ -2322,9 +2338,11 @@ Function Immersive_OnSemenFull(Actor Who)
 {send messages about milk being full.}
 
 	If(Who == self.Player)
-		String[] Msg = new String[2]
+		String[] Msg = new String[4]
 		Msg[0] = "My balls ache from being so full."
 		Msg[1] = "My balls are so full it hurts."
+		Msg[2] = "My balls are so full I can probably out-cum a dragon." ;; mm777
+		Msg[3] = "Sitting may be a bit difficult." ;; Meerkats Dance
 		self.PrintRandom(Msg)
 	EndIf
 

@@ -19,7 +19,7 @@ Event OnEffectStart(Actor Target, Actor From)
 EndEvent
 
 Event OnUpdate()
-	self.Value -= 0.01
+	self.Value -= 0.02
 	If(self.Value <= 1.0)
 		self.Value = 1.0
 		self.Done = TRUE
