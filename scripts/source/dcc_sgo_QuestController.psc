@@ -96,10 +96,23 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; This event describes how many bottles of milk the specified actor is
 ;; carrying. It is emitted any time another whole bottle is ready.
 
-;; SGO.OnSemenProgress ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SGO.OnSemenProgress ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Actor Who, Int Amount
 ;; This event describes how many bottles of semen the specified actor is
 ;; carrying. It is emitted any time another whole bottle is ready.
+
+;; SGO.OnBirthed ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Form What
+;; This event describes an object that was just birthed from the specified
+;; actor.
+
+;; SGO.OnMilked ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Form What
+;; This event describes an object that was just milked from the specific actor.
+
+;; SGO.OnWanked ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actor Who, Form What
+;; This event describes an object that was just wanked from the specific actor.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; NiOverride Keys ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -799,7 +812,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	Return
 EndEvent
 
-Function EventSendGemProgress(Actor Who, Int[] Progress)
+Function EventSend_OnGemProgress(Actor Who, Int[] Progress)
 {emit an event listing the current state of the gems being carried.}
 
 	Int e = ModEvent.Create("SGO.OnGemProgress")
@@ -821,7 +834,7 @@ Function EventSendGemProgress(Actor Who, Int[] Progress)
 	Return
 EndFunction
 
-Function EventSendMilkProgress(Actor Who, Int Progress)
+Function EventSend_OnMilkProgress(Actor Who, Int Progress)
 {emit an event stating the current amount of milk being carried.}
 
 	Int e = ModEvent.Create("SGO.OnMilkProgress")
@@ -835,7 +848,8 @@ Function EventSendMilkProgress(Actor Who, Int Progress)
 	Return
 EndFunction
 
-Function EventSendSemenProgress(Actor Who, Int Progress)
+Function EventSend_OnSemenProgress(Actor Who, Int Progress)
+{emit an event when an actor gains another bottle of semen.}
 
 	Int e = ModEvent.Create("SGO.OnSemenProgress")
 
@@ -845,6 +859,48 @@ Function EventSendSemenProgress(Actor Who, Int Progress)
 		ModEvent.Send(e)
 	EndIf
 
+	Return
+EndFunction
+
+Function EventSend_OnBirthed(Actor Who, Form What)
+{emit an event stating the gem an actor just birthed.}
+
+	Int e = ModEvent.Create("SGO.OnBirthed")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnMilked(Actor Who, Form What)
+{emit an event stating a bottle of milk was just milked.}
+
+	Int e = ModEvent.Create("SGO.OnMilked")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnWanked(Actor Who, Form What)
+{emit an event stating a bottle of semen was just wanked.}
+
+	Int e = ModEvent.Create("SGO.OnWanked")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
 	Return
 EndFunction
 
@@ -1460,6 +1516,7 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 			Dest.AddItem(GemType,1)
 		EndIf
 
+		self.EventSend_OnBirthed(Source,GemType)
 		x += 1
 	EndWhile
 
@@ -1706,7 +1763,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	If(Progressed)
 		self.Immersive_OnGemProgress(Who,Progress)
-		self.EventSendGemProgress(Who,Progress)
+		self.EventSend_OnGemProgress(Who,Progress)
 	Else
 		If(Progress[6] >= Capacity)
 			self.Immersive_OnGemFull(Who)
@@ -1754,6 +1811,7 @@ same.}
 			Dest.AddItem(MilkType,1)
 		EndIf
 
+		self.EventSend_OnMilked(Source,MilkType)
 		x += 1
 	EndWhile
 
@@ -1865,7 +1923,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	If(Before as Int < Milk as Int)
 		self.Immersive_OnMilkProgress(Who)
-		self.EventSendMilkProgress(Who,(Milk as Int))
+		self.EventSend_OnMilkProgress(Who,(Milk as Int))
 	EndIf
 
 	Return
@@ -1910,6 +1968,7 @@ same.}
 			Dest.AddItem(SemenType,1)
 		EndIf
 
+		self.EventSend_OnWanked(Source,SemenType)
 		x += 1
 	EndWhile
 
@@ -2028,7 +2087,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	If(Before as Int < Semen as Int)
 		self.Immersive_OnSemenProgress(Who)
-		self.EventSendSemenProgress(Who,(Semen as Int))
+		self.EventSend_OnSemenProgress(Who,(Semen as Int))
 	EndIf
 
 	If(Semen >= Capacity)
