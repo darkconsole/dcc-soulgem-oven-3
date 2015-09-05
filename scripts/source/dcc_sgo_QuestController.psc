@@ -45,12 +45,13 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; String[] SGO.Actor.Mod.ScaleBreastMax
 ;; String[] SGO.Actor.Mod.ScaleTesticle
 ;; String[] SGO.Actor.Mod.ScaleTesticleMax
-;; String[] SGO.Actor.Mod.GemCapacity
-;; String[] SGO.Actor.Mod.GemRate
-;; String[] SGO.Actor.Mod.MilkCapacity
-;; String[] SGO.Actor.Mod.MilkRate
-;; String[] SGO.Actor.Mod.SemenCapacity
-;; String[] SGO.Actor.Mod.SemenRate
+;; String[] SGO.Actor.Mod.GemCapacity (multiply %)
+;; String[] SGO.Actor.Mod.GemRate (multiply %)
+;; String[] SGO.Actor.Mod.MilkCapacity (multiply %)
+;; String[] SGO.Actor.Mod.MilkRate (multiply %)
+;; String[] SGO.Actor.Mod.MilkProduce (install 1 to force without preg)
+;; String[] SGO.Actor.Mod.SemenCapacity (multiply %)
+;; String[] SGO.Actor.Mod.SemenRate (multiply %)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1233,7 +1234,7 @@ Float Function ActorModGetTotal(Actor Who, String What)
 	Int x
 	Int Count = StorageUtil.StringListCount(Who,What)
 	String ModKey
-	Float Value
+	Float Value = 0.0
 	
 	x = 0
 	While(x < Count)
@@ -1690,9 +1691,17 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	Int Bio = self.ActorGetBiologicalFunctions(Who)
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Gem")
+	Int Count = self.ActorGemGetCount(Who)
 
 	If(Math.LogicalAnd(Bio,self.BioProduceGems) == 0)
-		;; no need to recalculate someone who cant inseminate.
+		;; no need to recalculate someone who cant produce gems.
+		self.ActorTrackForGems(Who,FALSE)
+		Return
+	EndIf
+
+	If(Count == 0)
+		;; no need to recalculate someone who has no gems.
+		self.ActorTrackForGems(Who,FALSE)
 		Return
 	EndIf
 
@@ -1710,13 +1719,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
-	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Data.Gem")
 	Float Total = 0.0
-
-	;; stop processing actors that don't need it.
-	If(Count == 0)
-		self.ActorTrackForGems(Who,FALSE)
-	EndIf
 
 	Float Gem
 	Float Before
@@ -1884,7 +1887,15 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	If(Math.LogicalAnd(Bio,self.BioProduceMilk) == 0)
 		;; no need to recalculate someone who cant make milk.
-		;; self.PrintDebug(Who.GetDisplayName() + " skipping milk (no produce)")
+		;; self.PrintDebug(Who.GetDisplayName() + " stopping milk (no produce)")
+		self.ActorTrackForMilk(Who,FALSE)
+		Return
+	EndIf
+
+	If(self.ActorGemGetCount(Who) == 0 && self.ActorModGetTotal(Who,"MilkProduce") == 0.0)
+		;; no need to recalculate someone who doesn't need to make milk.
+		;; self.PrintDebug(Who.GetDisplayName() + " stopping milk (no need)")
+		self.ActorTrackForMilk(Who,FALSE)
 		Return
 	EndIf
 
@@ -2032,10 +2043,13 @@ Float Function ActorSemenGetWeight(Actor Who)
 	Int FirstTime = 0
 	Float Semen = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Semen",-1.0)
 
+	;; trick it a bit so that when wanked the first time ever they report as
+	;; being full if they are a semen producer.
+
 	If(Semen == -1.0)
 		If(Math.LogicalAnd(Bio,self.BioInseminate))
-			StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Semen",self.OptSemenMaxCapacity)
-			Semen = self.OptSemenMaxCapacity
+			Semen = self.ActorSemenGetCapacity(Who)
+			StorageUtil.SetFloatValue(Who,"SGO.Actor.Data.Semen",Semen)
 		Else
 			Semen = 0.0
 		EndIf
@@ -2050,10 +2064,22 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	Int Bio = self.ActorGetBiologicalFunctions(Who)
 	Float Time = self.ActorGetTimeSinceUpdate(Who,"SGO.Actor.Time.Semen")
+	Float Capacity = self.ActorSemenGetCapacity(Who)
+	Float Semen = self.ActorSemenGetWeight(Who)
+	Float Before = Semen
 
 	If(Math.LogicalAnd(Bio,self.BioInseminate) == 0)
 		;; no need to recalculate someone who cant inseminate.
 		;; self.PrintDebug(Who.GetDisplayName() + " does not need semen")
+		self.ActorTrackForSemen(Who,FALSE)
+		Return
+	EndIf
+
+	If(Semen >= Capacity)
+		;; no need to recalculate someone who is full. for semen we will
+		;; unregister them since wanking will rereg. (this logic does not
+		;; apply to gems or milk.)
+		self.ActorTrackForSemen(Who,FALSE)
 		Return
 	EndIf
 
@@ -2065,10 +2091,6 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	;;;;;;;;
 	;;;;;;;;
-
-	Float Capacity = self.ActorSemenGetCapacity(Who)
-	Float Semen = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Semen",0.0)
-	Float Before = Semen
 
 	;; produce time 12hr (2/day), once an hour
 	;; 1 / 12 = 0.083/hr * 24 = 2 = two per day = right
@@ -2868,4 +2890,3 @@ Function MenuActorOptions_Handle(Actor Who)
 
 	Return
 EndFunction
-
