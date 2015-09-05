@@ -123,6 +123,26 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; SGO.Scale on NPC R Breast
 ;; SGO.Scale on NPC GenitalsScrotum [GenScrot]
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Forcing Milk Production ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; so you want to make a mod that forces an actor to produce milk without being
+;; pregnant? the following TWO lines of code are what you need to make it start
+;; happening.
+;;
+;; SGO.ActorModSetValue(Who,"MilkProduce","YourModName",1.0)
+;; SGO.ActorTrackForMilk(Who,TRUE)
+;;
+;; at some point, your mod will need to make it stop. the following ONE line of
+;; code is what you need to stop it.
+;;
+;; SGO.ActorModUnsetValue(Who,"MilkProduce","YourModName")
+;; 
+;; note - when you want to stop generating milk do not undo the tracking for
+;; milk. SGO will automatically stop tracking as soon as all mods have removed
+;; their desire for production.
+;;
+
+
 ;/*****************************************************************************
                                     __   __             
  .-----.----.-----.-----.-----.----|  |_|__.-----.-----.
