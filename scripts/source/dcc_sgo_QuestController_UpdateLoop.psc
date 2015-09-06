@@ -43,6 +43,7 @@ Function OnUpdate_GemData()
 		If(Who)
 			;;SGO.PrintDebug("Update Gem Data " + Who.GetDisplayName())
 			SGO.ActorGemUpdateData(Who)
+			SGO.ActorApplyBellyEncumber(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 
@@ -70,6 +71,7 @@ Function OnUpdate_MilkData()
 		If(Who)
 			;; SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
 			SGO.ActorMilkUpdateData(Who)
+			SGO.ActorApplyBreastInfluence(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 

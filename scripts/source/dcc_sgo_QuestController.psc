@@ -1212,15 +1212,16 @@ when needed.}
 
 	Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
 
-	If(!self.OptEffectBreastInfluence)
+	If(!self.OptEffectBreastInfluence || self.ActorMilkGetWeight(Who) == 0)
 		;; allow the above to clean up but not progress if disabled.
 		Return
 	EndIf
 
-	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,(self.ActorMilkGetPercent(Who) / 4))
+	Float Multi = self.ActorModGetTotal(Who,"BreastInfluence") + 1
 
+	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,((self.ActorMilkGetPercent(Who) / 4) * Multi))
+	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(1,((self.ActorMilkGetPercent(Who) / 8) * (Multi / 2)))
 	Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
-
 	Return
 EndFunction
 
@@ -1230,15 +1231,13 @@ needed.}
 
 	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
 
-	If(!self.OptEffectBellyEncumber)
+	If(!self.OptEffectBellyEncumber || self.ActorGemGetCount(Who) == 0)
 		;; allow the above to clean up but not progress if disabled.
 		Return
 	EndIf
 
 	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,((self.ActorGemGetPercent(Who) / 4) * -1))
-
 	Who.AddSpell(self.dcc_sgo_SpellBellyEncumber,FALSE)
-
 	Return
 EndFunction
 
@@ -1784,10 +1783,6 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	Float Capacity = self.ActorGemGetCapacity(Who)
 
-	If(Total / (Capacity * 6) >= 0.5)
-		self.ActorApplyBellyEncumber(Who)
-	EndIf
-
 	If(Progressed)
 		self.Immersive_OnGemProgress(Who,Progress)
 		self.EventSend_OnGemProgress(Who,Progress)
@@ -1951,10 +1946,6 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 
 	;;;;;;;;
 	;;;;;;;;
-
-	If(Milk / Capacity >= 0.5)
-		self.ActorApplyBreastInfluence(Who)
-	EndIF
 
 	If(Before as Int < Milk as Int)
 		self.Immersive_OnMilkProgress(Who)
