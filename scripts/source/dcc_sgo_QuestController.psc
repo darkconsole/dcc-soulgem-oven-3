@@ -335,6 +335,10 @@ Bool Property OptCumInflation = TRUE Auto Hidden
 Bool Property OptCumInflationHold = TRUE Auto Hidden
 {if cum should be held in or leaked out.}
 
+Int Property OptAnimationBirthing = -1 Auto Hidden
+{-1 = random animation every gem. 0 = random animation every birthing set. other
+values stand for the configured animations.}
+
 ;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptProgressAlchFactor = 1.0 Auto Hidden
@@ -2171,7 +2175,8 @@ Function ActorActionBirth_Solo(Actor Source)
 	self.BehaviourDefault(Source)
 	self.ActorRemoveChestpiece(Source)
 	self.ImmersiveAnimationBirthing(Source)
-	self.ImmersiveAboutFace(Source)
+
+	;;self.ImmersiveAboutFace(Source)
 
 	If(Source == self.Player)
 		MiscUtil.SetFreeCameraState(TRUE,7.0)
@@ -2189,6 +2194,9 @@ Function ActorActionBirth_Solo(Actor Source)
 		self.ActorGemGiveTo(Source,None,1)
 		self.ActorBodyUpdate_BellyScale(Source)
 		Utility.Wait(3.0)
+		If(self.OptAnimationBirthing == -1)
+			self.ImmersiveAnimationBirthing(Source)
+		EndIf
 	EndWhile
 
 	If(Source == self.Player)
@@ -2547,7 +2555,58 @@ EndFunction
 Function ImmersiveAnimationBirthing(Actor Who)
 {play a birthing animation on the actor.}
 	self.ImmersiveSheatheWeapon(Who)
-	Debug.SendAnimationEvent(who,"Missionary_A1_S4")
+
+	;;;;;;;;
+
+	;; Ani are the animations we want.
+	;; Pre are the animations we have to call before aclling the one we
+	;; want. a weird bug introduced into the animations in sexlab 1.6.
+	;; animations greater than S1 need to have S1 called before the actual.
+
+	;; cannot compare a string to a none (cast missing or types unrelated)
+	;; roflmao.
+
+	String[] Ani = new String[8]
+	String[] Pre = new String[8]
+
+	Ani[0] = "AP_BedMissionary_A1_S3"
+	Pre[0] = "AP_BedMissionary_A1_S1"
+
+	Ani[1] = "DoggyStyle_A1_S4"
+	Pre[1] = "DoggyStyle_A1_S1"
+
+	Ani[2] = "Missionary_A1_S4"
+	Pre[2] = "Missionary_A1_S1"
+
+	Ani[3] = "Zyn_Missionary_A1_S1"
+	Pre[3] = "----"
+
+	Ani[4] = "ZaZAPCCHorFB"
+	Pre[4] = "----"
+
+	Ani[5] = "ZaZAPC201"
+	Pre[5] = "----"
+
+	Ani[6] = "ZaZAPC202"
+	Pre[6] = "----"
+
+	Ani[7] = "ZaZAPC205"
+	Pre[7] = "----"
+
+	;;;;;;;;
+
+	Int Which
+	If(self.OptAnimationBirthing <= 0)
+		Which = Utility.RandomInt(0,(Ani.Length - 1))
+	Else
+		Which = self.OptAnimationBirthing - 1
+	EndIf
+
+	If(Pre[Which] != "----")
+		Debug.SendAnimationEvent(Who,Pre[Which])
+	EndIf
+
+	Debug.SendAnimationEvent(Who,Ani[Which])
 	Return
 EndFunction
 
