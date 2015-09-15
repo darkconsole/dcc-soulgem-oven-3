@@ -152,6 +152,9 @@ Scriptname dcc_sgo_QuestController extends Quest
 
 *****************************************************************************/;
 
+Bool Property Enabled = TRUE Auto hidden
+{if the mod should be allowed to do things.}
+
 Bool Property OK = FALSE Auto Hidden
 {this will be set to true if everything this mod needs to run has been found
 and accessible during startup or reset.}
@@ -250,29 +253,29 @@ Armor Property dcc_sgo_ArmorSquirtingCum Auto
 
 ;; gem options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptGemMatureTime = 144.0 Auto Hidden
+Float Property OptGemMatureTime = 144.0 Auto Hidden ;; mcm
 {how many hours for a gem to mature. default 144 = 6 days.}
 
-Int Property OptGemMaxCapacity = 6 Auto Hidden
+Int Property OptGemMaxCapacity = 6 Auto Hidden ;; mcm
 {how many gems can be carried at one time.}
 
-Bool Property OptGemFilled = TRUE Auto Hidden
+Bool Property OptGemFilled = TRUE Auto Hidden ;; mcm
 {if we should give filled gems or empty gems.}
 
 ;; milk options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptMilkProduceTime = 8.0 Auto Hidden
+Float Property OptMilkProduceTime = 8.0 Auto Hidden ;; mcm
 {how many hours for milk to produce. default 8 = 3 per day.}
 
-Int Property OptMilkMaxCapacity = 3 Auto Hidden
+Int Property OptMilkMaxCapacity = 3 Auto Hidden ;; mcm
 {how many bottles of milk can be carried at one time.}
-
-Float Property OptSemenProduceTime = 12.0 Auto Hidden
-{how many hours for semen to produce.}
 
 ;; semen options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Int Property OptSemenMaxCapacity = 2 Auto Hidden
+Float Property OptSemenProduceTime = 12.0 Auto Hidden ;; mcm
+{how many hours for semen to produce.}
+
+Int Property OptSemenMaxCapacity = 2 Auto Hidden ;; mcm
 {how many bottles of semen can be carried at a time.}
 
 ;; body scaling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2829,7 +2832,7 @@ Function MenuSoulgemInsert_Construct(Actor Who)
 {construct the soulgem insertion menu}
 
 	Int[] Inventory = self.ActorGemGetInventory(self.Player)
-	Bool Enabled
+	Bool Enable
 	String Label
 	String Text
 	Int x = 0
@@ -2839,15 +2842,15 @@ Function MenuSoulgemInsert_Construct(Actor Who)
 	While(x < Inventory.Length)
 
 		If(Inventory[x] > 0)
-			Enabled = TRUE
+			Enable = TRUE
 		Else
-			Enabled = FALSE
+			Enable = FALSE
 		EndIf
 
 		Label = self.GetGemName(x as Float) + " (" + Inventory[x] + ")"
 		Text = "Insert a " + self.GetGemName(x as Float) + " gem."
 
-		self.MenuWheelSetItem(x,Label,Text,Enabled)
+		self.MenuWheelSetItem(x,Label,Text,Enable)
 
 		x += 1
 	EndWhile

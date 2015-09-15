@@ -14,6 +14,10 @@ dcc_sgo_QuestController Property SGO Auto
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Event OnUpdate()
+	If(!SGO.Enabled)
+		Return
+	EndIf
+
 	SGO.ActorFertilityUpdateData(SGO.Player)
 
 	self.OnUpdate_GemData()

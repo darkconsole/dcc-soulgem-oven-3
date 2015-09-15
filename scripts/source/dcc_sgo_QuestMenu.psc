@@ -1,5 +1,6 @@
 Scriptname dcc_sgo_QuestMenu extends SKI_ConfigBase
-dcc_sgo_QuestController Property Furious Auto
+
+dcc_sgo_QuestController Property SGO Auto
 
 ;/*****************************************************************************
   _______             __                          _______                      
@@ -80,6 +81,7 @@ Event OnPageReset(string page)
 	If(Page == "General")
 		self.ShowPageGeneral()
 	ElseIf(Page == "Pregnancy")
+		self.ShowPagePregnancy()
 	ElseIf(Page == "Body Scales")
 	ElseIf(Page == "Immersion")
 	ElseIf(Page == "Animations")
@@ -108,7 +110,14 @@ EndEvent
 Event OnOptionSelect(Int Item)
 	Bool Val = FALSE
 
-	;; ...
+	If(Item == ItemEnabled)
+		SGO.Enabled = FALSE
+	ElseIf(Item == ItemUninstall)
+		;; perform uninstall operation.
+	ElseIf(item == ItemGemFilled)
+		Val = !SGO.OptGemFilled
+		SGO.OptGemFilled = Val
+	EndIf
 
 	self.SetToggleOptionValue(Item,Val)
 	Return
@@ -134,7 +143,37 @@ Event OnOptionSliderOpen(Int Item)
 	Float Max = 0.0
 	Float Interval = 0.0
 
-	;; ...
+	If(Item == ItemGemMaxCapacity)
+		Val = SGO.OptGemMaxCapacity
+		Min = 1.0
+		Max = 12.0
+		Interval = 1.0
+	ElseIf(Item == ItemGemMatureTime)
+		Val = SGO.OptGemMatureTime
+		Min = 1.0
+		Max = 24.0
+		Interval = 0.25
+	ElseIf(Item == ItemMilkMaxCapacity)
+		Val = SGO.OptMilkMaxCapacity
+		Min = 1.0
+		Max = 9.0
+		Interval = 1.0
+	ElseIf(Item == ItemMilkProduceTime)
+		Val = SGO.OptMilkProduceTime
+		Min = 1.0
+		Max = 24.0
+		Interval = 0.25
+	ElseIf(Item == ItemSemenMaxCapacity)
+		Val = SGO.OptSemenMaxCapacity
+		Min = 1.0
+		Max = 6.0
+		Interval = 1.0
+	ElseIf(Item == ItemSemenProduceTime)
+		Val = SGO.OptSemenProduceTime
+		Min = 1.0
+		Max = 24.0
+		Interval = 0.25
+	EndIf
 
 	SetSliderDialogStartValue(Val)
 	SetSliderDialogRange(Min,Max)
@@ -159,7 +198,25 @@ EndEvent
 Event OnOptionSliderAccept(Int Item, Float Val)
 	String Fmt = "{0}"
 
-	;; ...
+	If(Item == ItemGemMaxCapacity)
+		SGO.OptGemMaxCapacity = Val as Int
+		Fmt = "{0} Gems"
+	ElseIf(Item == ItemGemMatureTime)
+		SGO.OptGemMatureTime = (Val * 24)
+		Fmt = "{2} Days"
+	ElseIf(Item == ItemMilkMaxCapacity)
+		SGO.OptMilkMaxCapacity = Val as Int
+		Fmt = "{0} Bottles"
+	ElseIf(Item == ItemMilkProduceTime)
+		SGO.OptMilkProduceTime = Val
+		Fmt = "{2} Hours"
+	ElseIf(Item == ItemSemenMaxCapacity)
+		SGO.OptSemenMaxCapacity = Val as Int
+		Fmt = "{0} Bottles"
+	ElseIf(Item == ItemSemenProduceTime)
+		SGO.OptSemenProduceTime = Val
+		Fmt = "{2} Hours"
+	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
 	Return
@@ -177,7 +234,23 @@ EndEvent
 
 Event OnOptionHighlight(Int Item)
 
-	self.SetInfoText("Soulgem Oven The Third")
+	If(Item == ItemGemMaxCapacity)
+		self.SetInfoText("Maximum number of gems that can be incubated at one time.")
+	ElseIf(Item == ItemGemMatureTime)
+		self.SetInfoText("How long it takes for 1 gem to go from nothing to black (in days).")
+	Elseif(Item == ItemGemFilled)
+		self.SetInfoText("If enabled will birth filled gems. Disabled will birth empty gems.")
+	ElseIf(Item == ItemMilkMaxCapacity)
+		self.SetInfoText("Maximum bottles of milk that can be carried before unable to produce more.")
+	ElseIf(Item == ItemMilkProduceTime)
+		self.SetInfoText("How long it takes to produce 1 bottle of milk (in hours).")
+	Elseif(Item == ItemSemenMaxCapacity)
+		self.SetInfoText("Maximum bottles of semen that can be carried before unable to produce more.")
+	ElseIf(Item == ItemSemenProduceTime)
+		self.SetInfoText("How long it takes to produce 1 bottle of semen (in hours).")
+	EndIf
+
+	self.SetInfoText("Soulgem Oven: The Third")
 
 	Return
 EndEvent
@@ -193,7 +266,54 @@ EndFunction
 ;/*****************************************************************************
 *****************************************************************************/;
 
+Int ItemEnabled
+Int ItemUninstall
+
 Function ShowPageGeneral()
+	self.SetTitleText("General Settings")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	self.AddHeaderOption("Mod Control")
+		self.AddHeaderOption("")
+	ItemEnabled = self.AddToggleOption("Mod Enabled",SGO.Enabled)
+		ItemUninstall = self.AddToggleOption("Uninstall Mod",FALSE,OPTION_FLAG_DISABLED)
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+*****************************************************************************/;
+
+Int ItemGemMaxCapacity
+Int ItemGemMatureTime
+Int ItemGemFilled
+Int ItemMilkMaxCapacity
+Int ItemMilkProduceTime
+Int ItemSemenMaxCapacity
+Int ItemSemenProduceTime
+
+Function ShowPagePregnancy()
+	self.SetTitleText("Pregnancy Options")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	self.AddHeaderOption("Gem Options")
+		self.AddHeaderOption("<===>")
+	ItemGemMaxCapacity = self.AddSliderOption("Gem Max Capacity",SGO.OptGemMaxCapacity,"{0} Gems")
+		ItemGemMatureTime = self.AddSliderOption("Gem Mature Time",(SGO.OptGemMatureTime / 24),"{2} Days")
+	ItemGemFilled = self.AddToggleOption("Birth Filled Gems",SGO.OptGemFilled)
+
+	self.AddHeaderOption("Milk Options")
+		self.AddHeaderOption("(.)(.)")
+	ItemMilkMaxCapacity = self.AddSliderOption("Milk Max Capacity",SGO.OptMilkMaxCapacity,"{0} Bottles")
+		ItemGemMatureTime = self.AddSliderOption("Milk Produce Time",SGO.OptMilkProduceTime,"{0} Hours")
+
+	self.AddHeaderOption("Semen Options")
+		self.AddHeaderOption("8==D~~")
+	ItemSemenMaxCapacity = self.AddSliderOption("Semen Max Capacity",SGO.OptSemenMaxCapacity,"{0} Bottles")
+		ItemSemenProduceTime = self.AddSliderOption("Semen Produce Time",SGO.OptSemenProduceTime,"{0} Hours")
+
 
 	Return
 EndFunction
