@@ -309,13 +309,13 @@ Int Property OptPregChanceHumanoid = 50 Auto Hidden ;; mcm
 Int Property OptPregChanceBeast = 10 Auto Hidden ;; mcm
 {preg chance on encounters with beasts.}
 
-Bool Property OptFertility = TRUE Auto Hidden
+Bool Property OptFertility = TRUE Auto Hidden ;; mcm
 {if to enable fertility multiplier or not.}
 
-Int Property OptFertilityDays = 28 Auto Hidden
+Int Property OptFertilityDays = 28 Auto Hidden ;; mcm
 {how many days for a complete cycle. 0 to disable fertility.}
 
-Float Property OptFertilityWindow = 2.0 Auto Hidden
+Float Property OptFertilityWindow = 2.0 Auto Hidden ;; mcm
 {this is how wide the fertility is. 2.0 = twice as likely.}
 
 ;; immersion options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

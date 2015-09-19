@@ -114,9 +114,12 @@ Event OnOptionSelect(Int Item)
 		SGO.Enabled = FALSE
 	ElseIf(Item == ItemUninstall)
 		;; perform uninstall operation.
-	ElseIf(item == ItemGemFilled)
+	ElseIf(Item == ItemGemFilled)
 		Val = !SGO.OptGemFilled
 		SGO.OptGemFilled = Val
+	ElseIf(Item == ItemFertility)
+		Val = !SGO.OptFertility
+		SGO.OptFertility = Val
 	EndIf
 
 	self.SetToggleOptionValue(Item,Val)
@@ -183,6 +186,16 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 0.0
 		Max = 100.0
 		Interval = 1.0
+	ElseIf(Item == ItemFertilityDays)
+		Val = SGO.OptFertilityDays
+		Min = 7.0
+		Max = 60.0
+		Interval = 1.0
+	ElseIf(Item == ItemFertilityWindow)
+		Val = SGO.OptFertilityWindow
+		Min = 1.0
+		Max = 4.0
+		Interval = 0.25
 	EndIf
 
 	SetSliderDialogStartValue(Val)
@@ -232,6 +245,12 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemPregChanceBeast)
 		SGO.OptPregChanceBeast = Val as Int
 		Fmt = "{0}%"
+	ElseIf(Item == ItemFertilityDays)
+		SGO.OptFertilityDays = Val as Int
+		Fmt = "{0} Days"
+	ElseIf(Item == ItemFertilityWindow)
+		SGO.OptFertilityWindow = Val
+		Fmt = "{2}x"
 	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
@@ -268,6 +287,12 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("Chances of becoming pregnant when engaging another humanoid.")
 	ElseIf(Item == ItemPregChanceBeast)
 		self.SetInfoText("Chances of becoming pregnant when engaging an animal or creature.")
+	ElseIf(Item == ItemFertility)
+		self.SetInfoText("Simulate a fertility cycle that modifies the pregnancy chances on a day-to-day basis.")
+	ElseIf(Item == ItemFertilityDays)
+		self.SetInfoText("How many days for a full fertility cycle (one revolution from barely fertile, to super fertile, and back again).")
+	ElseIf(Item == ItemFertilityWindow)
+		self.SetInfoText("How much to modify the pregnancy chances. A value of 2.0 means at max fertility, your chances of getting pregnant are double of what is set.")
 	EndIf
 
 	self.SetInfoText("Soulgem Oven: The Third")
@@ -314,6 +339,9 @@ Int ItemMilkMaxCapacity
 Int ItemMilkProduceTime
 Int ItemSemenMaxCapacity
 Int ItemSemenProduceTime
+Int ItemFertility
+Int ItemFertilityDays
+Int ItemFertilityWindow
 
 Function ShowPagePregnancy()
 	self.SetTitleText("Pregnancy Options")
@@ -325,6 +353,13 @@ Function ShowPagePregnancy()
 	ItemPregChanceHumanoid = self.AddSliderOption("Preg Chance w/ Humanoid",SGO.OptPregChanceHumanoid,"{0}%")
 		ItemPregChanceBeast = self.AddSliderOption("Preg Chance w/ Beast",SGO.OptPregChanceBeast,"{0}%")
 
+	self.AddheaderOption("Fertility")
+		self.AddheaderOption("(;¬_¬)")
+	ItemFertility = self.AddToggleOption("Enable Fertility Multiplier",SGO.OptFertility)
+		ItemFertilityDays = self.AddSliderOption("Cycle Length",SGO.OptFertilityDays,"{0} Days")
+	ItemFertilityWindow = self.AddSliderOption("Multiplier",SGO.OptFertilityWindow,"{2}x")
+		self.AddEmptyOption()
+
 	self.AddHeaderOption("Gem Options")
 		self.AddHeaderOption("<===>")
 	ItemGemMaxCapacity = self.AddSliderOption("Gem Max Capacity",SGO.OptGemMaxCapacity,"{0} Gems")
@@ -333,7 +368,7 @@ Function ShowPagePregnancy()
 		self.AddEmptyOption()
 
 	self.AddHeaderOption("Milk Options")
-		self.AddHeaderOption("(.)(.)")
+		self.AddHeaderOption("(. )( .)")
 	ItemMilkMaxCapacity = self.AddSliderOption("Milk Max Capacity",SGO.OptMilkMaxCapacity,"{0} Bottles")
 		ItemGemMatureTime = self.AddSliderOption("Milk Produce Time",SGO.OptMilkProduceTime,"{0} Hours")
 
