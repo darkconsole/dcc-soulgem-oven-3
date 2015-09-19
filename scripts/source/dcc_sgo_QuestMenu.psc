@@ -83,9 +83,13 @@ Event OnPageReset(string page)
 	ElseIf(Page == "Pregnancy")
 		self.ShowPagePregnancy()
 	ElseIf(Page == "Body Scales")
+		self.ShowPageScales()
 	ElseIf(Page == "Immersion")
+		self.ShowPageImmersion()
 	ElseIf(Page == "Animations")
+		self.ShowPageAnimations()
 	ElseIf(Page == "Debug & Repair")
+		self.ShowPageDebug()
 	Else
 		self.ShowPageIntro()
 	EndIf
@@ -196,6 +200,36 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 1.0
 		Max = 4.0
 		Interval = 0.25
+	ElseIf(Item == ItemScaleBellyMax)
+		Val = SGO.OptScaleBellyMax
+		Min = 1.0
+		Max = 10.0
+		Interval = 0.05
+	ElseIf(Item == ItemScaleBellyCurve)
+		Val = SGO.OptScaleBellyCurve
+		Min = 0.5
+		Max = 2.0
+		Interval = 0.05
+	ElseIf(Item == ItemScaleBreastMax)
+		Val = SGO.OptScaleBreastMax
+		Min = 1.0
+		Max = 10.0
+		Interval = 0.05
+	ElseIf(Item == ItemScaleBreastCurve)
+		Val = SGO.OptScaleBreastCurve
+		Min = 0.5
+		Max = 2.0
+		Interval = 0.05
+	ElseIf(Item == ItemScaleTesticleMax)
+		Val = SGO.OptScaleTesticleMax
+		Min = 1.0
+		Max = 10.0
+		Interval = 0.05
+	ElseIf(Item == ItemScaleTesticleCurve)
+		Val = SGO.OptScaleTesticleCurve
+		Min = 0.5
+		Max = 2.0
+		Interval = 0.05
 	EndIf
 
 	SetSliderDialogStartValue(Val)
@@ -251,6 +285,24 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemFertilityWindow)
 		SGO.OptFertilityWindow = Val
 		Fmt = "{2}x"
+	ElseIf(Item == ItemScaleBellyMax)
+		SGO.OptScaleBellyMax = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleBellyCurve)
+		SGO.OptScaleBellyCurve = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleBreastMax)
+		SGO.OptScaleBreastMax = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleBreastCurve)
+		SGO.OptScaleBreastCurve = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleTesticleMax)
+		SGO.OptScaleTesticleMax = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleTesticleCurve)
+		SGO.OptScaleTesticleCurve = Val
+		Fmt = "{2}"
 	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
@@ -269,6 +321,7 @@ EndEvent
 
 Event OnOptionHighlight(Int Item)
 
+	;; ShowPagePregnancy()
 	If(Item == ItemGemMaxCapacity)
 		self.SetInfoText("Maximum number of gems that can be incubated at one time.")
 	ElseIf(Item == ItemGemMatureTime)
@@ -293,9 +346,30 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("How many days for a full fertility cycle (one revolution from barely fertile, to super fertile, and back again).")
 	ElseIf(Item == ItemFertilityWindow)
 		self.SetInfoText("How much to modify the pregnancy chances. A value of 2.0 means at max fertility, your chances of getting pregnant are double of what is set.")
-	EndIf
 
-	self.SetInfoText("Soulgem Oven: The Third")
+	;; ShowPageScales()
+	ElseIf(Item == ItemScaleBellyMax)
+		self.SetInfoText("How big to make the belly at max pregnant.")
+	ElseIf(Item == ItemScaleBellyCurve)
+		self.SetInfoText("[Advanced] Value that modifies the math to simulate volume at higher scales.")
+	ElseIf(Item == ItemScaleBreastMax)
+		self.SetInfoText("How big to make the breasts at max milk.")
+	ElseIf(Item == ItemScaleBreastCurve)
+		self.SetInfoText("[Advanced] Value that modifies the math to simulate volume at higher scales.")
+	ElseIf(Item == ItemScaleTesticleMax)
+		self.SetInfoText("How big to make the testicles at max semen.")
+	ElseIf(Item == ItemScaleTesticleCurve)
+		self.SetInfoText("[Advanced] Value that modifies the math to simulate volume at higher scales.")
+
+	;; ShowPageImmersion()
+
+	;; ShowPageAnimations()
+
+	;; ShowPageDebug()
+
+	Else
+		self.SetInfoText("Soulgem Oven: The Third")
+	EndIf
 
 	Return
 EndEvent
@@ -353,8 +427,8 @@ Function ShowPagePregnancy()
 	ItemPregChanceHumanoid = self.AddSliderOption("Preg Chance w/ Humanoid",SGO.OptPregChanceHumanoid,"{0}%")
 		ItemPregChanceBeast = self.AddSliderOption("Preg Chance w/ Beast",SGO.OptPregChanceBeast,"{0}%")
 
-	self.AddheaderOption("Fertility")
-		self.AddheaderOption("(;¬_¬)")
+	self.AddHeaderOption("Fertility")
+		self.AddHeaderOption("(;¬_¬)")
 	ItemFertility = self.AddToggleOption("Enable Fertility Multiplier",SGO.OptFertility)
 		ItemFertilityDays = self.AddSliderOption("Cycle Length",SGO.OptFertilityDays,"{0} Days")
 	ItemFertilityWindow = self.AddSliderOption("Multiplier",SGO.OptFertilityWindow,"{2}x")
@@ -381,3 +455,59 @@ Function ShowPagePregnancy()
 	Return
 EndFunction
 
+;/*****************************************************************************
+*****************************************************************************/;
+
+Int ItemScaleBellyCurve
+Int ItemScaleBellyMax
+Int ItemScaleBreastCurve
+Int ItemScaleBreastMax
+Int ItemScaleTesticleCurve
+Int ItemScaleTesticleMax
+
+Function ShowPageScales()
+	self.SetTitleText("Pregnancy Options")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	self.AddHeaderOption("Belly")
+		self.AddHeaderOption("|  )")
+	ItemScaleBellyMax = self.AddSliderOption("Belly Max",SGO.OptScaleBellyMax,"{2}")
+		ItemScaleBellyCurve = self.AddSliderOption("Belly Curve",SGO.OptScaleBellyCurve,"{2}")
+
+	self.AddHeaderOption("Breasts")
+		self.AddHeaderOption("(. )( .)")
+	ItemScaleBreastMax = self.AddSliderOption("Breast Max",SGO.OptScaleBreastMax,"{2}")
+		ItemScaleBreastCurve = self.AddSliderOption("Breast Curve",SGO.OptScaleBreastCurve,"{2}")
+
+	self.AddHeaderOption("Testicles")
+		self.AddHeaderOption("BALLZ")
+	ItemScaleTesticleMax = self.AddSliderOption("Testicle Max",SGO.OptScaleTesticleMax,"{2}")
+		ItemScaleTesticleCurve = self.AddSliderOption("Testicle Curve",SGO.OptScaleTesticleCurve,"{2}")
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+*****************************************************************************/;
+
+Function ShowPageImmersion()
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+*****************************************************************************/;
+
+Function ShowPageAnimations()
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+*****************************************************************************/;
+
+Function ShowPageDebug()
+
+	Return
+EndFunction

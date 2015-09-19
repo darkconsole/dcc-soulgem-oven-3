@@ -283,22 +283,22 @@ Int Property OptSemenMaxCapacity = 2 Auto Hidden ;; mcm
 Float Property OptScaleBellyCum = 2.0 Auto Hidden
 {how much to scale with cum inflation.}
 
-FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden
+FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden ;; mcm 
 {the value that tweaks the curve for bellies.}
 
-Float Property OptScaleBellyMax = 5.0 Auto Hidden
+Float Property OptScaleBellyMax = 5.0 Auto Hidden ;; mcm
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastCurve = 1.5 Auto Hidden
+Float Property OptScaleBreastCurve = 1.5 Auto Hidden ;; mcm
 {the value that tweaks the curve for breasts.}
 
-Float Property OptScaleBreastMax = 2.0 Auto Hidden
+Float Property OptScaleBreastMax = 2.0 Auto Hidden ;; mcm
 {the maximum size of the breasts when filled up.}
 
-Float Property OptScaleTesticleCurve = 1.25 Auto Hidden
+Float Property OptScaleTesticleCurve = 1.25 Auto Hidden ;; mcm
 {the value that scales the curve for testicles.}
 
-Float Property OptScaleTesticleMax = 2.0 Auto Hidden
+Float Property OptScaleTesticleMax = 2.0 Auto Hidden ;; mcm
 {the maximum size of the testicles when filled up.}
 
 ;; pregnancy options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
