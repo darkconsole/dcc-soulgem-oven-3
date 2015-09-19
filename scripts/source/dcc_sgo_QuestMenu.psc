@@ -173,6 +173,16 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 1.0
 		Max = 24.0
 		Interval = 0.25
+	ElseIf(Item == ItemPregChanceHumanoid)
+		Val = SGO.OptPregChanceHumanoid
+		Min = 0.0
+		Max = 100.0
+		Interval = 1.0
+	ElseIf(Item == ItemPregChanceBeast)
+		Val = SGO.OptPregChanceBeast
+		Min = 0.0
+		Max = 100.0
+		Interval = 1.0
 	EndIf
 
 	SetSliderDialogStartValue(Val)
@@ -216,6 +226,12 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemSemenProduceTime)
 		SGO.OptSemenProduceTime = Val
 		Fmt = "{2} Hours"
+	ElseIf(Item == ItemPregChanceHumanoid)
+		SGO.OptPregChanceHumanoid = Val as Int
+		Fmt = "{0}%"
+	ElseIf(Item == ItemPregChanceBeast)
+		SGO.OptPregChanceBeast = Val as Int
+		Fmt = "{0}%"
 	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
@@ -248,6 +264,10 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("Maximum bottles of semen that can be carried before unable to produce more.")
 	ElseIf(Item == ItemSemenProduceTime)
 		self.SetInfoText("How long it takes to produce 1 bottle of semen (in hours).")
+	ElseIf(Item == ItemPregChanceHumanoid)
+		self.SetInfoText("Chances of becoming pregnant when engaging another humanoid.")
+	ElseIf(Item == ItemPregChanceBeast)
+		self.SetInfoText("Chances of becoming pregnant when engaging an animal or creature.")
 	EndIf
 
 	self.SetInfoText("Soulgem Oven: The Third")
@@ -285,6 +305,8 @@ EndFunction
 ;/*****************************************************************************
 *****************************************************************************/;
 
+Int ItemPregChanceHumanoid
+Int ItemPregChanceBeast
 Int ItemGemMaxCapacity
 Int ItemGemMatureTime
 Int ItemGemFilled
@@ -298,11 +320,17 @@ Function ShowPagePregnancy()
 	self.SetCursorFillMode(LEFT_TO_RIGHT)
 	self.SetCursorPosition(0)
 
+	self.AddHeaderOption("Chances")
+		self.AddHeaderOption("(o.O)?")
+	ItemPregChanceHumanoid = self.AddSliderOption("Preg Chance w/ Humanoid",SGO.OptPregChanceHumanoid,"{0}%")
+		ItemPregChanceBeast = self.AddSliderOption("Preg Chance w/ Beast",SGO.OptPregChanceBeast,"{0}%")
+
 	self.AddHeaderOption("Gem Options")
 		self.AddHeaderOption("<===>")
 	ItemGemMaxCapacity = self.AddSliderOption("Gem Max Capacity",SGO.OptGemMaxCapacity,"{0} Gems")
 		ItemGemMatureTime = self.AddSliderOption("Gem Mature Time",(SGO.OptGemMatureTime / 24),"{2} Days")
 	ItemGemFilled = self.AddToggleOption("Birth Filled Gems",SGO.OptGemFilled)
+		self.AddEmptyOption()
 
 	self.AddHeaderOption("Milk Options")
 		self.AddHeaderOption("(.)(.)")

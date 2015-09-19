@@ -303,10 +303,10 @@ Float Property OptScaleTesticleMax = 2.0 Auto Hidden
 
 ;; pregnancy options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Int Property OptPregChanceHumanoid = 50 Auto Hidden
+Int Property OptPregChanceHumanoid = 50 Auto Hidden ;; mcm
 {preg chance on encounters with people.}
 
-Int Property OptPregChanceBeast = 10 Auto Hidden
+Int Property OptPregChanceBeast = 10 Auto Hidden ;; mcm
 {preg chance on encounters with beasts.}
 
 Bool Property OptFertility = TRUE Auto Hidden
@@ -1879,6 +1879,12 @@ Int Function ActorMilkGetCapacity(Actor Who)
 	;; no mods return a default of 0. a mod of 1.5 means i want to be able to
 	;; carry 150% more milks.
 	Return (self.OptMilkMaxCapacity * (self.ActorModGetTotal(Who,"MilkCapacity") + 1)) as Int
+EndFunction
+
+Int Function ActorMilkGetCount(Actor Who)
+{get the current whole bottle count.}
+
+	Return self.ActorMilkGetWeight(Who) as Int
 EndFunction
 
 Float Function ActorMilkGetTime(Actor Who)
