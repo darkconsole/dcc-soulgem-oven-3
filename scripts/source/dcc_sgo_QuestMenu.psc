@@ -633,7 +633,7 @@ Function ShowPageImmersion()
 	self.SetCursorPosition(0)
 
 	self.AddHeaderOption("Game Messages")
-		self.AddHeaderOption("#")
+		self.AddHeaderOption("")
 	ItemImmersivePlayer = self.AddToggleOption("For Player",SGO.OptImmersivePlayer)
 		ItemImmersiveNPC = self.AddToggleOption("For NPCs",SGO.OptImmersiveNPC)
 
