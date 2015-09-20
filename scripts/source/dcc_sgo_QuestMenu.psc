@@ -115,7 +115,8 @@ Event OnOptionSelect(Int Item)
 	Bool Val = FALSE
 
 	If(Item == ItemEnabled)
-		SGO.Enabled = FALSE
+		Val = !SGO.Enabled
+		SGO.Enabled = Val
 	ElseIf(Item == ItemUninstall)
 		;; perform uninstall operation.
 	ElseIf(Item == ItemGemFilled)
@@ -177,7 +178,7 @@ Event OnOptionSliderOpen(Int Item)
 		Max = 12.0
 		Interval = 1.0
 	ElseIf(Item == ItemGemMatureTime)
-		Val = SGO.OptGemMatureTime
+		Val = SGO.OptGemMatureTime / 24
 		Min = 1.0
 		Max = 24.0
 		Interval = 0.25
@@ -363,7 +364,7 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 		Fmt = "{2}s"
 	ElseIf(Item == ItemUpdateDelay)
 		SGO.OptUpdateDelay = Val
-		Fmt = "{2}s"
+		Fmt = "{3}s"
 	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
@@ -509,31 +510,31 @@ Function ShowPagePregnancy()
 	self.SetCursorPosition(0)
 
 	self.AddHeaderOption("Chances")
-		self.AddHeaderOption("(o.O)?")
+		self.AddHeaderOption("")
 	ItemPregChanceHumanoid = self.AddSliderOption("Preg Chance w/ Humanoid",SGO.OptPregChanceHumanoid,"{0}%")
 		ItemPregChanceBeast = self.AddSliderOption("Preg Chance w/ Beast",SGO.OptPregChanceBeast,"{0}%")
 
 	self.AddHeaderOption("Fertility")
-		self.AddHeaderOption("(;¬_¬)")
+		self.AddHeaderOption("")
 	ItemFertility = self.AddToggleOption("Enable Fertility Multiplier",SGO.OptFertility)
 		ItemFertilityDays = self.AddSliderOption("Cycle Length",SGO.OptFertilityDays,"{0} Days")
 	ItemFertilityWindow = self.AddSliderOption("Multiplier",SGO.OptFertilityWindow,"{2}x")
 		self.AddEmptyOption()
 
 	self.AddHeaderOption("Gem Options")
-		self.AddHeaderOption("<===>")
+		self.AddHeaderOption("")
 	ItemGemMaxCapacity = self.AddSliderOption("Gem Max Capacity",SGO.OptGemMaxCapacity,"{0} Gems")
 		ItemGemMatureTime = self.AddSliderOption("Gem Mature Time",(SGO.OptGemMatureTime / 24),"{2} Days")
 	ItemGemFilled = self.AddToggleOption("Birth Filled Gems",SGO.OptGemFilled)
 		self.AddEmptyOption()
 
 	self.AddHeaderOption("Milk Options")
-		self.AddHeaderOption("(. )( .)")
+		self.AddHeaderOption("")
 	ItemMilkMaxCapacity = self.AddSliderOption("Milk Max Capacity",SGO.OptMilkMaxCapacity,"{0} Bottles")
-		ItemGemMatureTime = self.AddSliderOption("Milk Produce Time",SGO.OptMilkProduceTime,"{0} Hours")
+		ItemMilkProduceTime = self.AddSliderOption("Milk Produce Time",SGO.OptMilkProduceTime,"{0} Hours")
 
 	self.AddHeaderOption("Semen Options")
-		self.AddHeaderOption("8==D~~")
+		self.AddHeaderOption("")
 	ItemSemenMaxCapacity = self.AddSliderOption("Semen Max Capacity",SGO.OptSemenMaxCapacity,"{0} Bottles")
 		ItemSemenProduceTime = self.AddSliderOption("Semen Produce Time",SGO.OptSemenProduceTime,"{0} Hours")
 
@@ -557,17 +558,17 @@ Function ShowPageScales()
 	self.SetCursorPosition(0)
 
 	self.AddHeaderOption("Belly")
-		self.AddHeaderOption("|  )")
+		self.AddHeaderOption("")
 	ItemScaleBellyMax = self.AddSliderOption("Belly Max",SGO.OptScaleBellyMax,"{2}")
 		ItemScaleBellyCurve = self.AddSliderOption("Belly Curve",SGO.OptScaleBellyCurve,"{2}")
 
 	self.AddHeaderOption("Breasts")
-		self.AddHeaderOption("(. )( .)")
+		self.AddHeaderOption("")
 	ItemScaleBreastMax = self.AddSliderOption("Breast Max",SGO.OptScaleBreastMax,"{2}")
 		ItemScaleBreastCurve = self.AddSliderOption("Breast Curve",SGO.OptScaleBreastCurve,"{2}")
 
 	self.AddHeaderOption("Testicles")
-		self.AddHeaderOption("BALLZ")
+		self.AddHeaderOption("")
 	ItemScaleTesticleMax = self.AddSliderOption("Testicle Max",SGO.OptScaleTesticleMax,"{2}")
 		ItemScaleTesticleCurve = self.AddSliderOption("Testicle Curve",SGO.OptScaleTesticleCurve,"{2}")
 
@@ -592,22 +593,22 @@ Function ShowPageImmersion()
 	self.SetCursorPosition(0)
 
 	self.AddHeaderOption("Game Messages")
-		self.AddHeaderOption("#immersion")
+		self.AddHeaderOption("#")
 	ItemImmersivePlayer = self.AddToggleOption("For Player",SGO.OptImmersivePlayer)
 		ItemImmersiveNPC = self.AddToggleOption("For NPCs",SGO.OptImmersiveNPC)
 
 	self.AddHeaderOption("Buffs / Debuffs")
-		self.AddHeaderOption("#moreimmersion")
+		self.AddHeaderOption("")
 	ItemEffectBreastInfluence = self.AddToggleOption("Breast Influence",SGO.OptEffectBreastInfluence)
 		ItemEffectBellyEncumber = self.AddToggleOption("Belly Encumberment",SGO.OptEffectBellyEncumber)
 
 	self.AddHeaderOption("Cum Inflation")
-		self.AddHeaderOption("#gooey")
+		self.AddHeaderOption("")
 	ItemCumInflation = self.AddToggleOption("Enable",SGO.OptCumInflation)
 		ItemCumInflationHold = self.AddToggleOption("Hold In",SGO.OptCumInflationHold)
 
 	self.AddHeaderOption("Skill Leveling")
-		self.AddHeaderOption("#yolo")
+		self.AddHeaderOption("")
 	ItemProgressAlchFactor = self.AddSliderOption("Alchemy Leveling",SGO.OptProgressAlchFactor,"{2}x")
 		ItemProgressEnchFactor = self.AddSliderOption("Enchanting Leveling",SGO.OptProgressEnchFactor,"{2}x")
 
@@ -644,7 +645,7 @@ Function ShowPageDebug()
 	self.AddHeaderOption("Performance")
 		self.AddHeaderOption("")
 	ItemUpdateInterval = self.AddSliderOption("Update Interval",SGO.OptUpdateInterval,"{2}s")
-		ItemUpdateDelay = self.AddSliderOption("Update Delay",SGO.OptUpdateDelay,"{2}s")
+		ItemUpdateDelay = self.AddSliderOption("Update Delay",SGO.OptUpdateDelay,"{3}s")
 
 	self.AddHeaderOption("Debugging")
 		self.AddHeaderOption("")
