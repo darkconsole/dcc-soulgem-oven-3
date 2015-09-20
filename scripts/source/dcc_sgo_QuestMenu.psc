@@ -37,24 +37,26 @@ EndEvent
 Event OnConfigInit()
 {things to do when the menu initalises (is opening)}
 
-	self.Pages = new String[6]
+	self.Pages = new String[7]
 	
-	self.Pages[0] = "General"
+	self.Pages[0] = "Splash"
+
+	self.Pages[1] = "General"
 	;; info, enable/disable, uninstall.
 
-	self.Pages[1] = "Pregnancy"
+	self.Pages[2] = "Pregnancy"
 	;; fertility, filled, capacities, days
 
-	self.Pages[2] = "Body Scales"
+	self.Pages[3] = "Body Scales"
 	;; min max scales, curves,
 
-	self.Pages[3] = "Immersion"
+	self.Pages[4] = "Immersion"
 	;; buffs/debuffs, texts
 
-	self.Pages[4] = "Animations"
+	self.Pages[5] = "Animations"
 	;; birthing & milking animation selection
 
-	self.Pages[5] = "Debug & Repair"
+	self.Pages[6] = "Debug & Repair"
 	;; debug msgs, reset.
 
 	Return
@@ -78,7 +80,9 @@ Event OnPageReset(string page)
 
 	self.UnloadCustomContent()
 
-	If(Page == "General")
+	If(Page == "Splash")
+		self.ShowPageIntro()
+	ElseIf(Page == "General")
 		self.ShowPageGeneral()
 	ElseIf(Page == "Pregnancy")
 		self.ShowPagePregnancy()
@@ -114,17 +118,22 @@ EndEvent
 Event OnOptionSelect(Int Item)
 	Bool Val = FALSE
 
+	;; ShowPageGeneral()
 	If(Item == ItemEnabled)
 		Val = !SGO.Enabled
 		SGO.Enabled = Val
 	ElseIf(Item == ItemUninstall)
 		;; perform uninstall operation.
+
+	;; ShowPagePregnancy()
 	ElseIf(Item == ItemGemFilled)
 		Val = !SGO.OptGemFilled
 		SGO.OptGemFilled = Val
 	ElseIf(Item == ItemFertility)
 		Val = !SGO.OptFertility
 		SGO.OptFertility = Val
+
+	;; ShowPageImmersion()
 	ElseIf(Item == ItemImmersivePlayer)
 		Val = !SGO.OptImmersivePlayer
 		SGO.OptImmersivePlayer = Val
@@ -143,6 +152,8 @@ Event OnOptionSelect(Int Item)
 	ElseIf(Item == ItemCumInflationHold)
 		Val = !SGO.OptCumInflationHold
 		SGO.OptCumInflationHold = Val
+
+	;; ShowPageDebug()
 	ElseIf(Item == ItemDebug)
 		Val = !SGO.OptDebug
 		SGO.OptDebug = Val
@@ -172,6 +183,7 @@ Event OnOptionSliderOpen(Int Item)
 	Float Max = 0.0
 	Float Interval = 0.0
 
+	;; ShowPagePregnancy()
 	If(Item == ItemGemMaxCapacity)
 		Val = SGO.OptGemMaxCapacity
 		Min = 1.0
@@ -220,8 +232,10 @@ Event OnOptionSliderOpen(Int Item)
 	ElseIf(Item == ItemFertilityWindow)
 		Val = SGO.OptFertilityWindow
 		Min = 1.0
-		Max = 4.0
+		Max = 10.0
 		Interval = 0.25
+
+	;; ShowPageScales()
 	ElseIf(Item == ItemScaleBellyMax)
 		Val = SGO.OptScaleBellyMax
 		Min = 1.0
@@ -252,6 +266,8 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 0.5
 		Max = 2.0
 		Interval = 0.05
+
+	;; ShowPageImmersion()
 	ElseIf(Item == ItemProgressAlchFactor)
 		Val = SGO.OptProgressAlchFactor
 		Min = 0.0
@@ -262,11 +278,20 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 0.0
 		Max = 4.0
 		Interval = 0.01
+	ElseIf(Item == ItemScaleBellyCum)
+		Val = SGO.OptScaleBellyCum
+		Min = 1.0
+		Max = 10.0
+		Interval = 0.05
+
+	;; ShowPageAnimations()
 	ElseIf(Item == ItemAnimationBirthing)
 		Val = SGO.OptAnimationBirthing
 		Min = -1.0
 		Max = 8.0
 		Interval = 1.0
+
+	;; ShowPageDebug()
 	Elseif(Item == ItemUpdateInterval)
 		Val = SGO.OptUpdateInterval
 		Min = 5.0
@@ -302,6 +327,7 @@ EndEvent
 Event OnOptionSliderAccept(Int Item, Float Val)
 	String Fmt = "{0}"
 
+	;; ShowPagePregnancy()
 	If(Item == ItemGemMaxCapacity)
 		SGO.OptGemMaxCapacity = Val as Int
 		Fmt = "{0} Gems"
@@ -332,6 +358,8 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemFertilityWindow)
 		SGO.OptFertilityWindow = Val
 		Fmt = "{2}x"
+
+	;; ShowPageScales()
 	ElseIf(Item == ItemScaleBellyMax)
 		SGO.OptScaleBellyMax = Val
 		Fmt = "{2}"
@@ -350,15 +378,24 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemScaleTesticleCurve)
 		SGO.OptScaleTesticleCurve = Val
 		Fmt = "{2}"
+
+	;; ShowPageImmersion()
 	ElseIf(Item == ItemProgressAlchFactor)
 		SGO.OptProgressAlchFactor = Val
 		Fmt = "{2}x"
 	ElseIf(Item == ItemProgressEnchFactor)
 		SGO.OptProgressEnchFactor = Val
 		Fmt = "{2}x"
+	ElseIf(Item == ItemScaleBellyCum)
+		SGO.OptScaleBellyCum = Val
+		Fmt = "{2}"
+
+	;; ShowPageAnimations()
 	ElseIf(Item == ItemAnimationBirthing)
 		SGO.OptAnimationBirthing = Val as Int
 		Fmt = "{0}"
+
+	;; ShowPageDebug()
 	ElseIf(Item == ItemUpdateInterval)
 		SGO.OptUpdateInterval = Val
 		Fmt = "{2}s"
@@ -436,6 +473,8 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("You will expand a little bit and squirt cum out slowly after sexy times.")
 	ElseIf(Item == ItemCumInflationHold)
 		self.SetInfoText("Instead of slowly leaking, you will hold all the cum in until you use the squirt lesser power.")
+	ElseIf(Item == ItemScaleBellyCum)
+		self.SetInfoText("The amount to scale the belly by for each bottle of cum inside.")
 	ElseIf(Item == ItemProgressAlchFactor)
 		self.SetInfoText("Level alchemy when milking. Set to 0 to disable. Set to 1 for normal rate.")
 	ElseIf(Item == ItemProgressEnchFactor)
@@ -584,6 +623,7 @@ Int ItemEffectBreastInfluence
 Int ItemEffectBellyEncumber
 Int ItemCumInflation
 Int ItemCumInflationHold
+Int ItemScaleBellyCum
 Int ItemProgressAlchFactor
 Int ItemProgressEnchFactor
 
@@ -606,6 +646,8 @@ Function ShowPageImmersion()
 		self.AddHeaderOption("")
 	ItemCumInflation = self.AddToggleOption("Enable",SGO.OptCumInflation)
 		ItemCumInflationHold = self.AddToggleOption("Hold In",SGO.OptCumInflationHold)
+	ItemScaleBellyCum = self.AddSliderOption("Scale Value",SGO.OptScaleBellyCum,"{2}")
+		self.AddEmptyOption()
 
 	self.AddHeaderOption("Skill Leveling")
 		self.AddHeaderOption("")

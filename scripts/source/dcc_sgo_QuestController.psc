@@ -253,29 +253,29 @@ Armor Property dcc_sgo_ArmorSquirtingCum Auto
 
 ;; gem options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptGemMatureTime = 144.0 Auto Hidden ;; mcm
+Float Property OptGemMatureTime = 144.0 Auto Hidden
 {how many hours for a gem to mature. default 144 = 6 days.}
 
-Int Property OptGemMaxCapacity = 6 Auto Hidden ;; mcm
+Int Property OptGemMaxCapacity = 6 Auto Hidden
 {how many gems can be carried at one time.}
 
-Bool Property OptGemFilled = TRUE Auto Hidden ;; mcm
+Bool Property OptGemFilled = TRUE Auto Hidden
 {if we should give filled gems or empty gems.}
 
 ;; milk options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptMilkProduceTime = 8.0 Auto Hidden ;; mcm
+Float Property OptMilkProduceTime = 8.0 Auto Hidden
 {how many hours for milk to produce. default 8 = 3 per day.}
 
-Int Property OptMilkMaxCapacity = 3 Auto Hidden ;; mcm
+Int Property OptMilkMaxCapacity = 3 Auto Hidden
 {how many bottles of milk can be carried at one time.}
 
 ;; semen options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptSemenProduceTime = 12.0 Auto Hidden ;; mcm
+Float Property OptSemenProduceTime = 12.0 Auto Hidden
 {how many hours for semen to produce.}
 
-Int Property OptSemenMaxCapacity = 2 Auto Hidden ;; mcm
+Int Property OptSemenMaxCapacity = 2 Auto Hidden
 {how many bottles of semen can be carried at a time.}
 
 ;; body scaling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -283,82 +283,82 @@ Int Property OptSemenMaxCapacity = 2 Auto Hidden ;; mcm
 Float Property OptScaleBellyCum = 2.0 Auto Hidden
 {how much to scale with cum inflation.}
 
-FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden ;; mcm 
+FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden 
 {the value that tweaks the curve for bellies.}
 
-Float Property OptScaleBellyMax = 5.0 Auto Hidden ;; mcm
+Float Property OptScaleBellyMax = 5.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
-Float Property OptScaleBreastCurve = 1.5 Auto Hidden ;; mcm
+Float Property OptScaleBreastCurve = 1.5 Auto Hidden
 {the value that tweaks the curve for breasts.}
 
-Float Property OptScaleBreastMax = 2.0 Auto Hidden ;; mcm
+Float Property OptScaleBreastMax = 2.0 Auto Hidden
 {the maximum size of the breasts when filled up.}
 
-Float Property OptScaleTesticleCurve = 1.25 Auto Hidden ;; mcm
+Float Property OptScaleTesticleCurve = 1.25 Auto Hidden
 {the value that scales the curve for testicles.}
 
-Float Property OptScaleTesticleMax = 2.0 Auto Hidden ;; mcm
+Float Property OptScaleTesticleMax = 2.0 Auto Hidden
 {the maximum size of the testicles when filled up.}
 
 ;; pregnancy options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Int Property OptPregChanceHumanoid = 50 Auto Hidden ;; mcm
+Int Property OptPregChanceHumanoid = 50 Auto Hidden
 {preg chance on encounters with people.}
 
-Int Property OptPregChanceBeast = 10 Auto Hidden ;; mcm
+Int Property OptPregChanceBeast = 10 Auto Hidden
 {preg chance on encounters with beasts.}
 
-Bool Property OptFertility = TRUE Auto Hidden ;; mcm
+Bool Property OptFertility = TRUE Auto Hidden
 {if to enable fertility multiplier or not.}
 
-Int Property OptFertilityDays = 28 Auto Hidden ;; mcm
+Int Property OptFertilityDays = 28 Auto Hidden
 {how many days for a complete cycle. 0 to disable fertility.}
 
-Float Property OptFertilityWindow = 2.0 Auto Hidden ;; mcm
+Float Property OptFertilityWindow = 2.0 Auto Hidden
 {this is how wide the fertility is. 2.0 = twice as likely.}
 
 ;; immersion options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool Property OptImmersivePlayer = TRUE Auto Hidden ;; mcm
+Bool Property OptImmersivePlayer = TRUE Auto Hidden
 {if we should show messages about the player state.}
 
-Bool Property OptImmersiveNPC = TRUE Auto Hidden ;; mcm
+Bool Property OptImmersiveNPC = TRUE Auto Hidden
 {if we should show messages about npc states.}
 
-Bool Property OptEffectBreastInfluence = TRUE Auto Hidden ;; mcm
+Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
 {if the breast influence buff/debuffs should be applied.}
 
-Bool Property OptEffectBellyEncumber = TRUE Auto Hidden ;; mcm
+Bool Property OptEffectBellyEncumber = TRUE Auto Hidden
 {if the belly encumberment buff/debuff should be applied.}
 
-Bool Property OptCumInflation = TRUE Auto Hidden ;; mcm
+Bool Property OptCumInflation = TRUE Auto Hidden
 {if to enable cum inflation or not.}
 
-Bool Property OptCumInflationHold = TRUE Auto Hidden ;; mcm
+Bool Property OptCumInflationHold = TRUE Auto Hidden
 {if cum should be held in or leaked out.}
 
-Int Property OptAnimationBirthing = -1 Auto Hidden ;; mcm
+Int Property OptAnimationBirthing = -1 Auto Hidden
 {-1 = random animation every gem. 0 = random animation every birthing set. other
 values stand for the configured animations.}
 
 ;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptProgressAlchFactor = 1.0 Auto Hidden ;; mcm
+Float Property OptProgressAlchFactor = 1.0 Auto Hidden
 {how fast alchemy should level by milking.}
 
-Float Property OptProgressEnchFactor = 1.0 Auto Hidden ;; mcm
+Float Property OptProgressEnchFactor = 1.0 Auto Hidden
 {how fast enchanting should level by birthing.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool  Property OptDebug = TRUE Auto Hidden ;; mcm
+Bool  Property OptDebug = TRUE Auto Hidden
 {print debugging information out to the console}
 
-Float Property OptUpdateInterval = 20.0 Auto Hidden ;; mcm
+Float Property OptUpdateInterval = 20.0 Auto Hidden
 {how long to wait before beginning the calculation queue again.}
 
-Float Property OptUpdateDelay = 0.125 Auto Hidden ;; mcm
+Float Property OptUpdateDelay = 0.125 Auto Hidden
 {how long to delay the update loop each iteration.}
 
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
