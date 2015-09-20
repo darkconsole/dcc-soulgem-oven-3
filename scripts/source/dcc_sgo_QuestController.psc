@@ -320,45 +320,45 @@ Float Property OptFertilityWindow = 2.0 Auto Hidden ;; mcm
 
 ;; immersion options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool Property OptImmersivePlayer = TRUE Auto Hidden
+Bool Property OptImmersivePlayer = TRUE Auto Hidden ;; mcm
 {if we should show messages about the player state.}
 
-Bool Property OptImmersiveNPC = TRUE Auto Hidden
+Bool Property OptImmersiveNPC = TRUE Auto Hidden ;; mcm
 {if we should show messages about npc states.}
 
-Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
+Bool Property OptEffectBreastInfluence = TRUE Auto Hidden ;; mcm
 {if the breast influence buff/debuffs should be applied.}
 
-Bool Property OptEffectBellyEncumber = TRUE Auto Hidden
+Bool Property OptEffectBellyEncumber = TRUE Auto Hidden ;; mcm
 {if the belly encumberment buff/debuff should be applied.}
 
-Bool Property OptCumInflation = TRUE Auto Hidden
+Bool Property OptCumInflation = TRUE Auto Hidden ;; mcm
 {if to enable cum inflation or not.}
 
-Bool Property OptCumInflationHold = TRUE Auto Hidden
+Bool Property OptCumInflationHold = TRUE Auto Hidden ;; mcm
 {if cum should be held in or leaked out.}
 
-Int Property OptAnimationBirthing = -1 Auto Hidden
+Int Property OptAnimationBirthing = -1 Auto Hidden ;; mcm
 {-1 = random animation every gem. 0 = random animation every birthing set. other
 values stand for the configured animations.}
 
 ;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Float Property OptProgressAlchFactor = 1.0 Auto Hidden
+Float Property OptProgressAlchFactor = 1.0 Auto Hidden ;; mcm
 {how fast alchemy should level by milking.}
 
-Float Property OptProgressEnchFactor = 1.0 Auto Hidden
+Float Property OptProgressEnchFactor = 1.0 Auto Hidden ;; mcm
 {how fast enchanting should level by birthing.}
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool  Property OptDebug = TRUE Auto Hidden
+Bool  Property OptDebug = TRUE Auto Hidden ;; mcm
 {print debugging information out to the console}
 
-Float Property OptUpdateInterval = 20.0 Auto Hidden
+Float Property OptUpdateInterval = 20.0 Auto Hidden ;; mcm
 {how long to wait before beginning the calculation queue again.}
 
-Float Property OptUpdateDelay = 0.125 Auto Hidden
+Float Property OptUpdateDelay = 0.125 Auto Hidden ;; mcm
 {how long to delay the update loop each iteration.}
 
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

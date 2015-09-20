@@ -124,6 +124,27 @@ Event OnOptionSelect(Int Item)
 	ElseIf(Item == ItemFertility)
 		Val = !SGO.OptFertility
 		SGO.OptFertility = Val
+	ElseIf(Item == ItemImmersivePlayer)
+		Val = !SGO.OptImmersivePlayer
+		SGO.OptImmersivePlayer = Val
+	ElseIf(Item == ItemImmersiveNPC)
+		Val = !SGO.OptImmersiveNPC
+		SGO.OptImmersiveNPC = Val
+	ElseIf(Item == ItemEffectBreastInfluence)
+		Val = !SGO.OptEffectBreastInfluence
+		SGO.OptEffectBreastInfluence = Val
+	ElseIf(Item == ItemEffectBellyEncumber)
+		Val = !SGO.OptEffectBellyEncumber
+		SGO.OptEffectBellyEncumber = Val
+	ElseIf(Item == ItemCumInflation)
+		Val = !SGO.OptCumInflation
+		SGO.OptCumInflation = Val
+	ElseIf(Item == ItemCumInflationHold)
+		Val = !SGO.OptCumInflationHold
+		SGO.OptCumInflationHold = Val
+	ElseIf(Item == ItemDebug)
+		Val = !SGO.OptDebug
+		SGO.OptDebug = Val
 	EndIf
 
 	self.SetToggleOptionValue(Item,Val)
@@ -230,6 +251,31 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 0.5
 		Max = 2.0
 		Interval = 0.05
+	ElseIf(Item == ItemProgressAlchFactor)
+		Val = SGO.OptProgressAlchFactor
+		Min = 0.0
+		Max = 4.0
+		Interval = 0.01
+	ElseIf(Item == ItemProgressEnchFactor)
+		Val = SGO.OptProgressEnchFactor
+		Min = 0.0
+		Max = 4.0
+		Interval = 0.01
+	ElseIf(Item == ItemAnimationBirthing)
+		Val = SGO.OptAnimationBirthing
+		Min = -1.0
+		Max = 8.0
+		Interval = 1.0
+	Elseif(Item == ItemUpdateInterval)
+		Val = SGO.OptUpdateInterval
+		Min = 5.0
+		Max = 128.0
+		Interval = 1.0
+	ElseIf(Item == ItemUpdateDelay)
+		Val = SGO.OptUpdateDelay
+		Min = 0.0
+		Max = 2.0
+		Interval = 0.005
 	EndIf
 
 	SetSliderDialogStartValue(Val)
@@ -303,6 +349,21 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemScaleTesticleCurve)
 		SGO.OptScaleTesticleCurve = Val
 		Fmt = "{2}"
+	ElseIf(Item == ItemProgressAlchFactor)
+		SGO.OptProgressAlchFactor = Val
+		Fmt = "{2}x"
+	ElseIf(Item == ItemProgressEnchFactor)
+		SGO.OptProgressEnchFactor = Val
+		Fmt = "{2}x"
+	ElseIf(Item == ItemAnimationBirthing)
+		SGO.OptAnimationBirthing = Val as Int
+		Fmt = "{0}"
+	ElseIf(Item == ItemUpdateInterval)
+		SGO.OptUpdateInterval = Val
+		Fmt = "{2}s"
+	ElseIf(Item == ItemUpdateDelay)
+		SGO.OptUpdateDelay = Val
+		Fmt = "{2}s"
 	EndIf
 
 	SetSliderOptionValue(Item,Val,Fmt)
@@ -362,11 +423,36 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("[Advanced] Value that modifies the math to simulate volume at higher scales.")
 
 	;; ShowPageImmersion()
+	ElseIf(Item == ItemImmersivePlayer)
+		self.SetInfoText("Display witty little messages about the player when relevant.")
+	ElseIf(Item == ItemImmersiveNPC)
+		self.SetInfoText("Display witty little messages about other NPCs when relevant.")
+	ElseIf(Item == ItemEffectBreastInfluence)
+		self.SetInfoText("The more milk your breasts contain, the better prices you get buying and selling shit.")
+	ElseIf(Item == ItemEffectBellyEncumber)
+		self.SetInfoText("The more mature the gems in your belly, the slower you move.")
+	ElseIf(Item == ItemCumInflation)
+		self.SetInfoText("You will expand a little bit and squirt cum out slowly after sexy times.")
+	ElseIf(Item == ItemCumInflationHold)
+		self.SetInfoText("Instead of slowly leaking, you will hold all the cum in until you use the squirt lesser power.")
+	ElseIf(Item == ItemProgressAlchFactor)
+		self.SetInfoText("Level alchemy when milking. Set to 0 to disable. Set to 1 for normal rate.")
+	ElseIf(Item == ItemProgressEnchFactor)
+		self.SetInfoText("Level enchanting with birthing gems. Set to 0 to disable. Set to 1 for normal rate.")
 
 	;; ShowPageAnimations()
+	ElseIf(Item == ItemAnimationBirthing)
+		self.SetInfoText("-1 = random each gem, 0 = random each set, 1-8 select specific animations.")
 
 	;; ShowPageDebug()
+	ElseIf(Item == ItemDebug)
+		self.SetInfoText("Turn on/off debugging messages.")
+	ElseIf(Item == ItemUpdateInterval)
+		self.SetInfoText("Time between checking the tracked actors for update.")
+	ElseIf(Item == ItemUpdateDelay)
+		self.SetInfoText("Time between updating each actor.")
 
+	;; bbq.
 	Else
 		self.SetInfoText("Soulgem Oven: The Third")
 	EndIf
@@ -466,7 +552,7 @@ Int ItemScaleTesticleCurve
 Int ItemScaleTesticleMax
 
 Function ShowPageScales()
-	self.SetTitleText("Pregnancy Options")
+	self.SetTitleText("Body Scale Options")
 	self.SetCursorFillMode(LEFT_TO_RIGHT)
 	self.SetCursorPosition(0)
 
@@ -491,15 +577,54 @@ EndFunction
 ;/*****************************************************************************
 *****************************************************************************/;
 
+Int ItemImmersivePlayer
+Int ItemImmersiveNPC
+Int ItemEffectBreastInfluence
+Int ItemEffectBellyEncumber
+Int ItemCumInflation
+Int ItemCumInflationHold
+Int ItemProgressAlchFactor
+Int ItemProgressEnchFactor
+
 Function ShowPageImmersion()
+	self.SetTitleText("IMMERSIVE++")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	self.AddHeaderOption("Game Messages")
+		self.AddHeaderOption("#immersion")
+	ItemImmersivePlayer = self.AddToggleOption("For Player",SGO.OptImmersivePlayer)
+		ItemImmersiveNPC = self.AddToggleOption("For NPCs",SGO.OptImmersiveNPC)
+
+	self.AddHeaderOption("Buffs / Debuffs")
+		self.AddHeaderOption("#moreimmersion")
+	ItemEffectBreastInfluence = self.AddToggleOption("Breast Influence",SGO.OptEffectBreastInfluence)
+		ItemEffectBellyEncumber = self.AddToggleOption("Belly Encumberment",SGO.OptEffectBellyEncumber)
+
+	self.AddHeaderOption("Cum Inflation")
+		self.AddHeaderOption("#gooey")
+	ItemCumInflation = self.AddToggleOption("Enable",SGO.OptCumInflation)
+		ItemCumInflationHold = self.AddToggleOption("Hold In",SGO.OptCumInflationHold)
+
+	self.AddHeaderOption("Skill Leveling")
+		self.AddHeaderOption("#yolo")
+	ItemProgressAlchFactor = self.AddSliderOption("Alchemy Leveling",SGO.OptProgressAlchFactor,"{2}x")
+		ItemProgressEnchFactor = self.AddSliderOption("Enchanting Leveling",SGO.OptProgressEnchFactor,"{2}x")
 
 	Return
 EndFunction
 
 ;/*****************************************************************************
 *****************************************************************************/;
+
+Int ItemAnimationBirthing
 
 Function ShowPageAnimations()
+	self.SetTitleText("Animation Options")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	ItemAnimationBirthing = self.AddSliderOption("Birthing Animation",SGO.OptAnimationBirthing,"{0}")
 
 	Return
 EndFunction
@@ -507,7 +632,24 @@ EndFunction
 ;/*****************************************************************************
 *****************************************************************************/;
 
+Int ItemDebug
+Int ItemUpdateInterval
+Int ItemUpdateDelay
+
 Function ShowPageDebug()
+	self.SetTitleText("Debugging")
+	self.SetCursorFillMode(LEFT_TO_RIGHT)
+	self.SetCursorPosition(0)
+
+	self.AddHeaderOption("Performance")
+		self.AddHeaderOption("")
+	ItemUpdateInterval = self.AddSliderOption("Update Interval",SGO.OptUpdateInterval,"{2}s")
+		ItemUpdateDelay = self.AddSliderOption("Update Delay",SGO.OptUpdateDelay,"{2}s")
+
+	self.AddHeaderOption("Debugging")
+		self.AddHeaderOption("")
+	ItemDebug = self.AddToggleOption("Debugging Messages",SGO.OptDebug)
+		self.AddEmptyOption()
 
 	Return
 EndFunction
