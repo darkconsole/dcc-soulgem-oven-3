@@ -831,7 +831,9 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 				self.ActorGemAdd(ActorList[x])
 			EndIf
 
-			ActorList[x].AddSpell(self.dcc_sgo_SpellInflate)
+			If(self.OptCumInflation)
+				ActorList[x].AddSpell(self.dcc_sgo_SpellInflate)
+			EndIf
 		EndIf
 
 		x += 1
