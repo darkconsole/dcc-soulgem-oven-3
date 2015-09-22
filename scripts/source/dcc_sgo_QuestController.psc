@@ -198,6 +198,15 @@ Perk Property dcc_sgo_PerkCannotInseminate Auto
 Perk Property dcc_sgo_PerkCanInseminate Auto
 {allow an actor to inseminate others if it normally could not.}
 
+Perk Property dcc_sgo_PerkDisableScaleBreast Auto
+{prevent an actor from scaling the breast nodes.}
+
+Perk Property dcc_sgo_PerkDisableScaleBelly Auto
+{prevent an actor from scaling the belly node.}
+
+Perk Property dcc_sgo_PerkDisableScaleTesticle Auto
+{prevent an actor from scaling the testicle node.}
+
 FormList Property dcc_sgo_ListMilkItems Auto
 {form list of milks. this list needs to line up with the two race lists.}
 
@@ -312,6 +321,10 @@ Int Property OptPregChanceHumanoid = 50 Auto Hidden
 
 Int Property OptPregChanceBeast = 10 Auto Hidden
 {preg chance on encounters with beasts.}
+
+Bool Property OptPregIncludeAnal = TRUE Auto Hidden
+{if anal should be considered inseminable, since the animations are nearly
+impossible to tell by looking at them.}
 
 Bool Property OptFertility = TRUE Auto Hidden
 {if to enable fertility multiplier or not.}
@@ -433,7 +446,7 @@ Function ResetMod_Values()
 	self.OptScaleBellyCurve = 1.75
 	self.OptScaleBellyMax = 5.0
 	self.OptScaleBreastCurve = 1.50
-	self.OptScaleBreastMax = 2.0
+	self.OptScaleBreastMax = 3.5
 	self.OptScaleTesticleCurve = 1.25
 	self.OptScaleTesticleMax = 2.0
 	self.OptProgressEnchFactor = 1.0
@@ -450,6 +463,7 @@ Function ResetMod_Values()
 	self.OptImmersivePlayer = TRUE
 	self.OptImmersiveNPC = TRUE
 	self.OptDebug = TRUE
+	self.OptKickThingsWithHavok = TRUE
 	self.OptUpdateInterval = 20.0
 	self.OptUpdateDelay = 0.125
 
@@ -764,8 +778,6 @@ EndEvent
 Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 {handler for sexlab encounters ending.}
 
-	self.PrintDebug("OnEncounterEnding Fired")
-
 	Actor[] ActorList = SexLab.HookActors(Args)
 	Int[] ActorBio = PapyrusUtil.IntArray(ActorList.Length)
 	sslBaseAnimation Animation = SexLab.HookAnimation(Args)
@@ -780,11 +792,10 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 
 	;; check if the animation type even included penetration.
 
-	If(!Animation.IsVaginal && !Animation.IsAnal)
-		self.PrintDebug("Encounter did not have penetration (vag/anal).")
+	If(!Animation.IsVaginal && !(self.OptPregIncludeAnal && Animation.IsAnal))
+		self.PrintDebug("Scene did not appear to include inseminable actions.")
 		Return
 	EndIf
-
 
 	;;;;;;;;
 	;;;;;;;;
@@ -813,10 +824,10 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 		x += 1
 	EndWhile
 
-	If(Math.LogicalAnd(PartyBio,5) != 5)
+	If(Math.LogicalAnd(PartyBio,(self.BioInseminate + self.BioProduceGems)) != (self.BioInseminate + self.BioProduceGems))
 		;; if we didn't have a winning combination of fuel and ovens
 		;; available there is no point in proceeeding.
-		self.PrintDebug("Encounter did not have a viable combo (" + PartyBio + ").")
+		self.PrintDebug("Encounter did not have a viable combo (" + PartyBio + " (" + (self.BioInseminate + self.BioProduceGems) + ")).")
 		Return
 	EndIf
 
@@ -837,9 +848,8 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 			self.PrintDebug("Preg Chance Fail for " + ActorList[x].GetDisplayName())
 		EndIf
 
-		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) > 0)
-			If(Preg)
-				self.PrintDebug(ActorList[x].GetDisplayname() + " will produce gems.")
+		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) == self.BioProduceGems)
+			If(Preg)				
 				self.ActorGemAdd(ActorList[x])
 			EndIf
 
@@ -1032,6 +1042,18 @@ bitwise so you must do each function indivdually.}
 		self.ActorSetBiologicalFunction(Who,Func,FALSE)
 	Else
 		self.ActorSetBiologicalFunction(Who,Func,TRUE)
+	EndIf
+
+	Return
+EndFunction
+
+Function ActorTogglePerk(Actor Who, Perk What)
+{toggle an actor's perk. any perk. whatever.}
+
+	If(Who.HasPerk(What))
+		Who.RemovePerk(What)
+	Else
+		Who.AddPerk(What)
 	EndIf
 
 	Return
@@ -1472,6 +1494,10 @@ EndFunction
 Function ActorBodyUpdate_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBelly))
+		Return
+	EndIf
+
 	Float Belly = self.ActorModGetMultiplier(Who,"Belly.Scale")
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Gem.Data")
 
@@ -1489,7 +1515,11 @@ EndFunction
 
 Function ActorBodyUpdate_BreastScale(Actor Who)
 {handle the physical representation of the breasts.}
-	
+
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBreast))
+		Return
+	EndIf
+
 	Float Breast = self.ActorModGetMultiplier(Who,"Breast.Scale")
 
 	;; with a max of 3 bottles, max of 200% more visual
@@ -1505,6 +1535,10 @@ EndFunction
 
 Function ActorBodyUpdate_TesticleScale(Actor Who)
 {handle the physical representation of the breasts.}
+
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleTesticle))
+		Return
+	EndIf
 	
 	Float Testicle = self.ActorModGetMultiplier(Who,"Testicle.Scale")
 
@@ -1530,9 +1564,14 @@ EndFunction
 Bool Function ActorGemAdd(Actor Who, Float Value=0.0)
 {add another gem to this actor's pipeline.}
 
-	If(StorageUtil.FloatListCount(Who,"SGO.Actor.Gem.Data") < self.ActorGemGetCapacity(Who))
+	If(Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceGems) == 0)
+		self.PrintDebug(Who.GetDisplayName() + " cannot produce gems.");
+		Return FALSE
+	EndIf
+
+	If(self.ActorGemGetCount(Who) < self.ActorGemGetCapacity(Who))
 		StorageUtil.FloatListAdd(Who,"SGO.Actor.Gem.Data",Value,TRUE)
-		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + StorageUtil.FloatListCount(Who,"SGO.Actor.Gem.Data") + ")")	
+		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + self.ActorGemGetCount(Who) + ")")	
 		self.ActorTrackForGems(Who,TRUE)
 		self.ActorTrackForMilk(Who,TRUE)
 		Return TRUE
@@ -3153,13 +3192,54 @@ Function MenuActorOptions_Construct(Actor Who)
 	EndIf
 
 	;;;;;;;;
+	;; note to future self.
+	;; i know people are going to ask about global disable and then only
+	;; enabling one or two. when that happens add global OptNode toggle options
+	;; and then treat the disables as enables instead of creating new enable
+	;; perks.
+	;;;;;;;;
+
+	Bool ItemNodeBreastEnable = TRUE
+	String ItemNodeBreastLabel = "Breast Scale OFF"
+	String ItemNodeBreastText = "Pevent scaling of Breasts."
+
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBreast))
+		ItemNodeBreastLabel = "Breast Scale ON"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemNodeBellyEnable = TRUE
+	String ItemNodeBellyLabel = "Belly Scale OFF"
+	String ItemNodeBellyText = "Pevent scaling of Belly."
+
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBelly))
+		ItemNodeBellyLabel = "Belly Scale ON"
+	EndIf
+
+	;;;;;;;;
+
+	Bool ItemNodeTesticleEnable = TRUE
+	String ItemNodeTesticleLabel = "Testicle Scale OFF"
+	String ItemNodeTesticleText = "Pevent scaling of Testicles."
+
+	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleTesticle))
+		ItemNodeTesticleLabel = "Testicle Scale ON"
+	EndIf
+
+	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
 	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable)
 	self.MenuWheelSetItem(1,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
 	self.MenuWheelSetItem(2,ItemInseminateLabel,ItemInseminateText,ItemInseminateEnable)
-	self.MenuWheelSetItem(4,"F: x" + self.ActorFertilityGetMod(Who) + "","This actor's fertility modifier.",FALSE)
-	self.MenuWheelSetItem(7,"[Main Menu]","Back to main menu.",TRUE)
+
+	self.MenuWheelSetItem(4,ItemNodeBellyLabel,ItemNodeBellyText,ItemNodeBellyEnable)
+	self.MenuWheelSetItem(5,ItemNodeBreastLabel,ItemNodeBreastText,ItemNodeBreastEnable)
+	self.MenuWheelSetItem(6,ItemNodeTesticleLabel,ItemNodeTesticleText,ItemNodeTesticleEnable)
+
+	self.MenuWheelSetItem(3,"F: " + self.ActorFertilityGetMod(Who) + "x","This actor's fertility modifier.",FALSE)
+	self.MenuWheelSetItem(7,"[<< Main Menu]","Back to main menu.",TRUE)
 
 	Return
 EndFunction
@@ -3180,6 +3260,12 @@ Function MenuActorOptions_Handle(Actor Who)
 		self.ActorToggleBiologicalFunction(Who,self.BioProduceMilk)
 	ElseIf(Result == 2)
 		self.ActorToggleBiologicalFunction(Who,self.BioInseminate)
+	ElseIf(Result == 4)
+		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleBelly)
+	ElseIf(Result == 5)
+		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleBreast)
+	ElseIf(Result == 6)
+		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleTesticle)
 	ElseIf(Result == 7)
 		self.MenuMain(Who)
 	EndIf
