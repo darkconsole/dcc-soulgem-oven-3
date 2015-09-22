@@ -542,15 +542,12 @@ Int Function GetGemValue(Form What)
 	FormList List
 	Int Value
 
-	If(self.OptGemFilled)
-		List = self.dcc_sgo_ListGemFull
-	Else
-		List = self.dcc_sgo_ListGemEmpty
-	EndIf
-
-	Value = List.Find(What)
+	Value = self.dcc_sgo_ListGemEmpty.Find(What)
 	If(Value == -1)
-		Return 0
+		Value = self.dcc_sgo_ListGemFull.Find(What)
+		If(Value == -1)
+			Return 0
+		EndIf
 	EndIf
 
 	Return (Value + 1)
@@ -1681,6 +1678,43 @@ Int Function ActorGemGetInventory_GetGems(Actor Who, Int Offset)
 	Return Count
 EndFunction
 
+Form[] Function ActorGemListInventory(Actor Who)
+{build a list of all the gems we have in inventory.}
+
+	Form[] List = Utility.CreateFormArray(0)
+	Form Current
+	Int x
+
+	x = 0
+	While(x < self.dcc_sgo_ListGemFragment.GetSize())
+		Current = self.dcc_sgo_ListGemFragment.GetAt(x)
+		If(Who.GetItemCount(Current) > 0)
+			List = PapyrusUtil.PushForm(List,Current)
+		EndIf
+		x += 1
+	EndWhile
+
+	x = 0
+	While(x < self.dcc_sgo_ListGemEmpty.GetSize())
+		Current = self.dcc_sgo_ListGemEmpty.GetAt(x)
+		If(Who.GetItemCount(Current) > 0)
+			List = PapyrusUtil.PushForm(List,Current)
+		EndIf
+		x += 1
+	EndWhile
+
+	x = 0
+	While(x < self.dcc_sgo_ListGemFull.GetSize())
+		Current = self.dcc_sgo_ListGemFull.GetAt(x)
+		If(Who.GetItemCount(Current) > 0)
+			List = PapyrusUtil.PushForm(List,Current)
+		EndIf
+		x += 1
+	EndWhile
+
+	Return List
+EndFunction
+
 Float Function ActorGemGetTime(Actor Who)
 {determine how fast gems should be generating for this actor.}
 
@@ -2044,6 +2078,26 @@ the type of semen that we should spawn in the world.}
 	Return self.dcc_sgo_ListSemenItems.GetAt(0)
 EndFunction
 
+Form[] Function ActorSemenListInventory(Actor Who)
+{get an array that only lists the semens an actor has. this function is kinda a
+hax and currently the only one. gem has a non-hax but milk will need one of
+these in the near future.}
+
+	Form[] List = Utility.CreateFormArray(0)
+	Int ListLen = self.dcc_sgo_ListSemenItems.GetSize()
+	Int x = 0
+
+	While(x < ListLen)
+		If(Who.GetItemCount(self.dcc_sgo_ListSemenItems.GetAt(x)) != 0)
+			List = PapyrusUtil.PushForm(List,self.dcc_sgo_ListSemenItems.GetAt(x))
+		EndIf
+
+		x += 1
+	EndWhile
+
+	Return List
+EndFunction
+
 ;;;;;;;;
 
 Int Function ActorSemenGetCapacity(Actor Who)
@@ -2338,7 +2392,7 @@ Function ActorActionWank_Duo(Actor Source, Actor Dest)
 	Return
 EndFunction
 
-Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
+Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 {gem insertion sequence.}
 
 	If(self.ActorGemGetCount(Dest) >= self.ActorGemGetCapacity(Dest))
@@ -2346,7 +2400,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 		Return
 	EndIf
 
-	If(self.ActorGemRemoveFromInventory(Source,Size) == None)
+	If(Source.GetItemCount(GemType) == 0)
 		self.Print(Source.GetDisplayName() + " has none of those gems to use.")
 		Return
 	EndIf
@@ -2354,6 +2408,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 	self.BehaviourDefault(Dest)
 	self.ActorRemoveChestpiece(Dest)
 	self.ImmersiveAnimationInsertion(Dest)
+	Source.RemoveItem(GemType,1)
 	Utility.Wait(3.0)
 
 	self.ImmersiveExpression(Dest,TRUE)
@@ -2361,7 +2416,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 	self.ImmersiveBlush(Dest)
 	Utility.Wait(3.0)
 
-	self.ActorGemAdd(Dest,Size)
+	self.ActorGemAdd(Dest,self.GetGemValue(GemType))
 	self.ActorBodyUpdate_BellyScale(Dest)
 	self.ImmersiveSoundMoan(Dest)
 	Utility.Wait(2.0)
@@ -2796,14 +2851,26 @@ Function MenuMain_Construct(Actor Who)
 
 	;;;;;;;;
 
+	Bool ItemGemEnable = FALSE
+	String ItemGemLabel = "Insert Gem..."
+	String ItemGemText = "Insert gems from inventory."
+	Int ItemGemCount = PapyrusUtil.AddIntValues(self.ActorGemGetInventory(self.Player))
+
+	If(ItemGemCount > 0)
+		ItemGemEnable = TRUE
+		ItemGemLabel = "Insert Gem (" + ItemGemCount  + ")..."
+	EndIf
+
+	;;;;;;;;
+
 	Bool ItemSemenEnable = FALSE
-	String ItemSemenLabel = "No Semen"
-	String ItemSemenText = "Inseminate with a bottle of semen."
-	Int ItemSemenCount = Who.GetItemCount(self.dcc_sgo_ListSemenItems)
+	String ItemSemenLabel = "Inseminate..."
+	String ItemSemenText = "Insert a bottle of semen."
+	Int ItemSemenCount = self.Player.GetItemCount(self.dcc_sgo_ListSemenItems)
 
 	If(ItemSemenCount > 0)
 		ItemSemenEnable = TRUE
-		ItemSemenLabel = ItemSemenCount + " Bottles"
+		ItemSemenLabel = "Inseminate (" + ItemSemenCount + ")..."
 	EndIf
 
 	;;;;;;;;
@@ -2831,7 +2898,7 @@ Function MenuMain_Construct(Actor Who)
 	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
-	self.MenuWheelSetItem(0,"Insert Gem...","Insert gems from inventory.",TRUE)
+	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable)
 	self.MenuWheelSetItem(1,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
 	self.MenuWheelSetItem(3,"Actor Options...","Set advanced options.",TRUE)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
@@ -2895,48 +2962,38 @@ EndFunction
 Function MenuSoulgemInsert_Construct(Actor Who)
 {construct the soulgem insertion menu}
 
-	Int[] Inventory = self.ActorGemGetInventory(self.Player)
-	Bool Enable
-	String Label
-	String Text
+	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
+	Form[] List = self.ActorGemListInventory(self.Player)
 	Int x = 0
 
-	UIExtensions.InitMenu("UIWheelMenu")
-
-	While(x < Inventory.Length)
-
-		If(Inventory[x] > 0)
-			Enable = TRUE
-		Else
-			Enable = FALSE
-		EndIf
-
-		Label = self.GetGemName(x as Float) + " (" + Inventory[x] + ")"
-		Text = "Insert a " + self.GetGemName(x as Float) + " gem."
-
-		self.MenuWheelSetItem(x,Label,Text,Enable)
-
+	While(x < List.Length)
+		Menu.AddEntryItem(List[x].GetName())
 		x += 1
 	EndWhile
 
-	self.MenuWheelSetItem(7,"[Main Menu]","Back to main menu.",TRUE)
+	Menu.AddEntryItem("[<< Main Menu]")
 	Return
 EndFunction
 
 Function MenuSoulgemInsert_Handle(Actor Who)
 {handle the soulgem insertion menu.}
 
+	Form[] List = self.ActorGemListInventory(self.Player)
+	Int Result
+
 	self.ImmersiveMenuCamera(TRUE)
 	self.dcc_sgo_ImodMenu.Apply(1.0)
 	Utility.Wait(0.25)
 
-	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+	UIExtensions.OpenMenu("UIListMenu",Who)
+	Result = UIExtensions.GetMenuResultInt("UIListMenu")
 	self.ImmersiveMenuCamera(FALSE)
 
-	If(Result >= 0 && Result <= 6)
-		self.ActorActionInsert(self.Player,Who,Result)
-	Else
+	If(Result >= List.Length)
 		self.MenuMain(Who)
+		
+	Else
+		self.ActorActionInsert(self.Player,Who,List[Result])
 	EndIf
 
 	Return
@@ -2970,35 +3027,37 @@ EndFunction
 Function MenuSemenInsert_Construct(Actor Who)
 {construct the insemination menu}
 
-	Int ListLen = self.dcc_sgo_ListSemenItems.GetSize()
+	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
+	Form[] List = self.ActorSemenListInventory(self.Player)
 	Int x = 0
 
-	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
-
-	x = 0
-	While(x < ListLen)
-		Menu.AddEntryItem(self.dcc_sgo_ListSemenItems.GetAt(x).GetName())
+	While(x < List.Length)
+		Menu.AddEntryItem(List[x].GetName())
 		x += 1
 	EndWhile
 
-	Menu.AddEntryItem("[Main Menu]")
+	Menu.AddEntryItem("[<< Main Menu]")
 	Return
 EndFunction
 
 Function MenuSemenInsert_Handle(Actor Who)
 {handle the insemination menu.}
+	
+	Form[] List = self.ActorSemenListInventory(self.Player)
+	Int Result
 
 	self.ImmersiveMenuCamera(TRUE)
 	self.dcc_sgo_ImodMenu.Apply(1.0)
 	Utility.Wait(0.25)
 
-	Int Result = UIExtensions.OpenMenu("UIListMenu",Who)
+	UIExtensions.OpenMenu("UIListMenu",Who)
+	Result = UIExtensions.GetMenuResultInt("UIListMenu")
 	self.ImmersiveMenuCamera(FALSE)
 
-	If(Result >= self.dcc_sgo_ListSemenItems.GetSize())
+	If(Result >= List.Length)
 		self.MenuMain(Who)
 	Else
-		self.ActorActionInseminate(self.Player,Who,self.dcc_sgo_ListSemenItems.GetAt(Result))
+		self.ActorActionInseminate(self.Player,Who,List[Result])
 	EndIf
 
 	Return
