@@ -157,6 +157,9 @@ Event OnOptionSelect(Int Item)
 	ElseIf(Item == ItemDebug)
 		Val = !SGO.OptDebug
 		SGO.OptDebug = Val
+	ElseIf(Item == ItemKickThingsWithHavok)
+		Val = !SGO.Opt.OptKickThingsWithHavok
+		SGO.OptKickThingsWithHavok = Val
 	EndIf
 
 	self.SetToggleOptionValue(Item,Val)
@@ -678,6 +681,7 @@ EndFunction
 Int ItemDebug
 Int ItemUpdateInterval
 Int ItemUpdateDelay
+Int ItemKickThingsWithHavok
 
 Function ShowPageDebug()
 	self.SetTitleText("Debugging")
@@ -688,6 +692,8 @@ Function ShowPageDebug()
 		self.AddHeaderOption("")
 	ItemUpdateInterval = self.AddSliderOption("Update Interval",SGO.OptUpdateInterval,"{2}s")
 		ItemUpdateDelay = self.AddSliderOption("Update Delay",SGO.OptUpdateDelay,"{3}s")
+	ItemKickThingsWithHavok = self.AddToggleOption("Kick Dropped Items",SGO.OptKickThingsWithHavok)
+		self.AddEmptyOption()
 
 	self.AddHeaderOption("Debugging")
 		self.AddHeaderOption("")
