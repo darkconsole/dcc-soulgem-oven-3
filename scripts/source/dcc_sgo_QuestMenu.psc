@@ -232,7 +232,7 @@ Event OnOptionSliderOpen(Int Item)
 	ElseIf(Item == ItemFertilityWindow)
 		Val = SGO.OptFertilityWindow
 		Min = 1.0
-		Max = 10.0
+		Max = 100.0
 		Interval = 0.25
 
 	;; ShowPageScales()

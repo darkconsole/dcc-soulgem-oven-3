@@ -814,9 +814,9 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	x = 0
 	While(x < ActorList.Length)
 		If(MaleCount > 0)
-			Preg = (self.OptPregChanceHumanoid <= (Utility.RandomInt(0,100) * self.ActorFertilityGetMod(ActorList[x])))
+			Preg = (Utility.RandomInt(0,100) <= (self.OptPregChanceHumanoid * self.ActorFertilityGetMod(ActorList[x])))
 		Else
-			Preg = (self.OptPregChanceBeast <= (Utility.RandomInt(0,100) * self.ActorFertilityGetMod(ActorList[x])))
+			Preg = (Utility.RandomInt(0,100) <= (self.OptPregChanceBeast * self.ActorFertilityGetMod(ActorList[x])))
 		EndIf
 
 		If(Preg)
@@ -1134,6 +1134,10 @@ EndFunction
 Float Function ActorFertilityGetMod(Actor Who, float Vmod=0.0)
 {fetch the current multiplier for the fertility value using science and shit.}
 
+	If(!self.OptFertility)
+		Return 1.0
+	EndIf
+
 	;; the x value of the wave.
 	Float Fval = StorageUtil.GetFloatValue(Who,"SGO.Actor.Data.Fertility",missing=0.0)
 	Fval += Vmod
@@ -1141,7 +1145,7 @@ Float Function ActorFertilityGetMod(Actor Who, float Vmod=0.0)
 
 	;; the period offset is used to crank the amplitude and vertical offset of
 	;; the wave.
-	Float Poff = self.OptFertilityWindow / 2
+	Float Poff = (self.OptFertilityWindow - 1) / 2
 
 	;; the period length.
 	Int Plen = self.OptFertilityDays
@@ -1155,7 +1159,7 @@ Float Function ActorFertilityGetMod(Actor Who, float Vmod=0.0)
 
 	;; SINEWAVESMOTHERFUCKER.
 
-	Return (Math.Sin(Math.RadiansToDegrees(((2*3.14159) / Plen) * Fval)) * Poff) + Poff
+	Return ((Math.Sin(Math.RadiansToDegrees(((2*3.14159) / Plen) * Fval)) * Poff) + Poff) + 1
 EndFunction
 
 Function ActorFertilityUpdateData(Actor Who, Bool Force=FALSE)
@@ -2370,6 +2374,43 @@ Function ActorActionInsert(Actor Source, Actor Dest, Int Size)
 	Return
 EndFunction
 
+Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
+{semen insertion sequence.}
+
+	If(Source.GetItemCount(What) == 0)
+		self.Print(Source.GetDisplayName() + " has no semen to use.")
+		Return
+	EndIf
+
+	If(self.ActorGemGetCount(Dest) >= self.ActorGemGetCapacity(Dest))
+		self.Print(Dest.GetDisplayName() + " cannot fit anymore gems.")
+		Return
+	EndIf
+
+	self.BehaviourDefault(Dest)
+	self.ActorRemoveChestpiece(Dest)
+	self.ImmersiveAnimationInsertion(Dest)
+	Source.RemoveItem(What,1)
+	Utility.Wait(3.0)
+
+	self.ImmersiveExpression(Dest,TRUE)
+	self.ImmersiveSoundMoan(Dest,FALSE)
+	self.ImmersiveBlush(Dest)
+	Utility.Wait(3.0)
+
+	self.ActorGemAdd(Dest,0)
+	self.ActorBodyUpdate_BellyScale(Dest)
+	self.ImmersiveSoundMoan(Dest)
+	Utility.Wait(2.0)
+
+	self.ImmersiveAnimationIdle(Dest)
+	self.ImmersiveExpression(Dest,FALSE)
+	self.ActorReplaceChestpiece(Dest)
+	self.BehaviourClear(Dest,TRUE)
+
+	Return
+EndFunction
+
 
 ;/*****************************************************************************
   __                                    __               __     __   
@@ -2755,6 +2796,18 @@ Function MenuMain_Construct(Actor Who)
 
 	;;;;;;;;
 
+	Bool ItemSemenEnable = FALSE
+	String ItemSemenLabel = "No Semen"
+	String ItemSemenText = "Inseminate with a bottle of semen."
+	Int ItemSemenCount = Who.GetItemCount(self.dcc_sgo_ListSemenItems)
+
+	If(ItemSemenCount > 0)
+		ItemSemenEnable = TRUE
+		ItemSemenLabel = ItemSemenCount + " Bottles"
+	EndIf
+
+	;;;;;;;;
+
 	Bool ItemMilkEnable = FALSE
 	String ItemMilkLabel = "Not Milkable"
 	String ItemMilkText = "Milk it dry."
@@ -2766,23 +2819,24 @@ Function MenuMain_Construct(Actor Who)
 
 	;;;;;;;;
 
-	Bool ItemSemenEnable = FALSE
-	String ItemSemenLabel = "Not Wankable"
-	String ItemSemenText = "Wank it dry."
+	Bool ItemWankEnable = FALSE
+	String ItemWankLabel = "Not Wankable"
+	String ItemWankText = "Wank it dry."
 
 	If(self.ActorSemenGetWeight(Who) > 0.0)
-		ItemSemenEnable = TRUE
-		ItemSemenLabel = "Semen (" + (self.ActorSemenGetWeight(Who) as Int) + ", " + (self.ActorSemenGetPercent(Who) as Int) + "%)"
+		ItemWankEnable = TRUE
+		ItemWankLabel = "Semen (" + (self.ActorSemenGetWeight(Who) as Int) + ", " + (self.ActorSemenGetPercent(Who) as Int) + "%)"
 	EndIf
 
 	;;;;;;;;
 
 	UIExtensions.InitMenu("UIWheelMenu")
 	self.MenuWheelSetItem(0,"Insert Gem...","Insert gems from inventory.",TRUE)
-	self.MenuWheelSetItem(1,"Actor Options...","Set advanced options.",TRUE)
+	self.MenuWheelSetItem(1,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
+	self.MenuWheelSetItem(3,"Actor Options...","Set advanced options.",TRUE)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
-	self.MenuWheelSetItem(6,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
+	self.MenuWheelSetItem(6,ItemWankLabel,ItemWankText,ItemWankEnable)
 	Return
 EndFunction
 
@@ -2799,6 +2853,8 @@ Function MenuMain_Handle(Actor Who)
 	If(Result == 0)
 		self.MenuSoulgemInsert(Who)
 	ElseIf(Result == 1)
+		self.MenuSemenInsert(Who)
+	ElseIf(Result == 3)
 		self.MenuActorOptions(Who)
 	ElseIf(Result == 4)
 		self.ActorActionBirth(Who,Who)
@@ -2881,6 +2937,68 @@ Function MenuSoulgemInsert_Handle(Actor Who)
 		self.ActorActionInsert(self.Player,Who,Result)
 	Else
 		self.MenuMain(Who)
+	EndIf
+
+	Return
+EndFunction
+
+Function MenuSemenInsert(Actor Who)
+{show the insemination menu.}
+
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	;;;;;;;;
+
+	Int Bio = self.ActorGetBiologicalFunctions(Who)
+
+	If(Math.LogicalAnd(Bio,self.BioProduceGems) == 0)
+		self.Print(Who.GetDisplayName() + " cannot produce gems.")
+		Return
+	EndIf
+
+	self.MenuSemenInsert_Construct(Who)	
+	self.MenuSemenInsert_Handle(Who)
+	Return
+EndFunction
+
+Function MenuSemenInsert_Construct(Actor Who)
+{construct the insemination menu}
+
+	Int ListLen = self.dcc_sgo_ListSemenItems.GetSize()
+	Int x = 0
+
+	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
+
+	x = 0
+	While(x < ListLen)
+		Menu.AddEntryItem(self.dcc_sgo_ListSemenItems.GetAt(x).GetName())
+		x += 1
+	EndWhile
+
+	Menu.AddEntryItem("[Main Menu]")
+	Return
+EndFunction
+
+Function MenuSemenInsert_Handle(Actor Who)
+{handle the insemination menu.}
+
+	self.ImmersiveMenuCamera(TRUE)
+	self.dcc_sgo_ImodMenu.Apply(1.0)
+	Utility.Wait(0.25)
+
+	Int Result = UIExtensions.OpenMenu("UIListMenu",Who)
+	self.ImmersiveMenuCamera(FALSE)
+
+	If(Result >= self.dcc_sgo_ListSemenItems.GetSize())
+		self.MenuMain(Who)
+	Else
+		self.ActorActionInseminate(self.Player,Who,self.dcc_sgo_ListSemenItems.GetAt(Result))
 	EndIf
 
 	Return
