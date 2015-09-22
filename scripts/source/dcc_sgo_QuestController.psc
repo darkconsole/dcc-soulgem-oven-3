@@ -2767,6 +2767,7 @@ Function ImmersiveAnimationWanking(Actor Who)
 {play the milking animation on an actor.} 
 
 	self.ImmersiveSheatheWeapon(Who)
+	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S1")
 	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S2")
 	Return
 EndFunction
