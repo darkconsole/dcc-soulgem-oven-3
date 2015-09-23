@@ -1276,15 +1276,29 @@ Function ActorApplyBellyEncumber(Actor Who)
 {this function will re-calculate the belly encumberment and refresh it when
 needed.}
 
-	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+	;; speedmult normally does not get updated until the player stance changes
+	;; such that as of crouching, sprinting, or brandishing weapons.
+
+	;; a new note on the ck wiki claims that modding the carryweight will
+	;; fool the game into updating the speed, so i restructured this a little
+	;; to avoid having to do it four times.
 
 	If(!self.OptEffectBellyEncumber || self.ActorGemGetCount(Who) == 0)
-		;; allow the above to clean up but not progress if disabled.
+		;; remove the effect if they disabled it or we aren't even pregnant
+		;; anymore. then we are done here.
+		Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+		Who.ModActorValue("CarryWeight",1.0)
+		Who.ModActorValue("CarryWeight",-1.0)
 		Return
 	EndIf
 
-	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,((self.ActorGemGetPercent(Who) / 4) * -1))
+	;; else we need to update and apply it.
+	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,(((self.ActorGemGetPercent(Who) / 4) * -1)) * self.ActorModGetMultiplier(Who,"Belly.Encumber"))
 	Who.AddSpell(self.dcc_sgo_SpellBellyEncumber,FALSE)
+	Who.ModActorValue("CarryWeight",1.0)
+	Who.ModActorValue("CarryWeight",-1.0)
+
 	Return
 EndFunction
 
