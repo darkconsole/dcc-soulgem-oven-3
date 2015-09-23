@@ -1507,7 +1507,7 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
-	Belly = ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * (self.OptScaleBellyMax * self.ActorModGetMultiplier(Who,"Belly.ScaleMax")))
+	Belly += ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * (self.OptScaleBellyMax * self.ActorModGetMultiplier(Who,"Belly.ScaleMax")))
 
 	self.BoneSetScale(Who,"NPC Belly","SGO.Scale",Belly)
 	Return
