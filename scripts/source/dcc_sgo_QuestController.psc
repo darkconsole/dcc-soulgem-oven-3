@@ -210,7 +210,7 @@ Perk Property dcc_sgo_PerkDisableScaleTesticle Auto
 FormList Property dcc_sgo_ListMilkItems Auto
 {form list of milks. this list needs to line up with the two race lists.}
 
-FormList Property dcc_sgo_ListSemenItems Auto
+FormList Property dcc_sgo_ListSemenItems  Auto
 {form list of semens. it needs to line up with the race lists.}
 
 FormList Property dcc_sgo_ListRaceNormal Auto
@@ -619,11 +619,11 @@ Float Function BoneCurveValue(Actor Who, String Bone, Float Value)
 
 	Float Curve = 2.0
 
-	If(Bone == "NPC Belly")
+	If(Bone == "NPC Belly" || Bone == "Belly")
 		Curve = self.OptScaleBellyCurve
-	ElseIf(Bone == "NPC L Breast" || Bone == "NPC R Breast")
+	ElseIf(Bone == "NPC L Breast" || Bone == "NPC R Breast" || Bone == "Breasts")
 		Curve = self.OptScaleBreastCurve
-	ElseIf(Bone == "NPC GenitalsScrotum [GenScrot]")
+	ElseIf(Bone == "NPC GenitalsScrotum [GenScrot]" || Bone == "NPC Testicles" || Bone == "Testicles")
 		Curve = self.OptScaleTesticleCurve
 	EndIf
 
@@ -651,23 +651,37 @@ EndFunction
 Bool Function BoneHasScale(Actor Who, String Bone, String ModKey)
 {wrap nioverride, test if a bone scale exists.}
 
+	If(Bone == "NPC Testicles")
+		Bone = "NPC GenitalsScrotum [GenScrot]"
+	EndIf
+
 	Return NiOverride.HasNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
 EndFunction
 
 Float Function BoneGetScale(Actor Who, String Bone, String ModKey)
 {wrap nioverride, get a bone scale.}
 
+	If(Bone == "NPC Testicles")
+		Bone = "NPC GenitalsScrotum [GenScrot]"
+	EndIf
+
 	Float Value = NiOverride.GetNodeTransformScale((Who as ObjectReference),False,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
 
 	If(Value != 0.0)
 		Return Value
 	Else
+		;; because no scale couldn't have just been one point oh fucking zero
+		;; which is the actual representation of "no scales" in nioverride.
 		Return 1.0
 	EndIf
 EndFunction
 
 Function BoneSetScale(Actor Who, String Bone, String ModKey, Float Value)
 {wrap nioverride, set a bone scale.}
+
+	If(Bone == "NPC Testicles")
+		Bone = "NPC GenitalsScrotum [GenScrot]"
+	EndIf
 
 	If(Value != 1.0)
 		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey,self.BoneCurveValue(Who,Bone,Value))
@@ -1540,7 +1554,7 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
-	Breast += ((self.ActorMilkGetWeight(Who) / self.OptMilkMaxCapacity) * (self.OptScaleBreastMax * self.ActorModGetMultiplier(Who,"Breast.ScaleMax")))
+	Breast += ((self.ActorMilkGetWeight(Who) / self.ActorMilkGetCapacity(Who)) * (self.OptScaleBreastMax * self.ActorModGetMultiplier(Who,"Breast.ScaleMax")))
 
 	self.BoneSetScale(Who,"NPC L Breast","SGO.Scale",Breast)
 	self.BoneSetScale(Who,"NPC R Breast","SGO.Scale",Breast)
@@ -1560,7 +1574,7 @@ Function ActorBodyUpdate_TesticleScale(Actor Who)
 	;; 0 semen ((0 / 2) * 2.0) + 1 == 1.0
 	;; 2 semen ((2 / 2) * 2.0) + 1 == 3.0
 
-	Testicle += ((self.ActorSemenGetWeight(Who) / self.OptSemenMaxCapacity) * (self.OptScaleTesticleMax * self.ActorModGetMultiplier(Who,"Testicle.ScaleMax")))
+	Testicle += ((self.ActorSemenGetWeight(Who) / self.ActorSemenGetCapacity(Who)) * (self.OptScaleTesticleMax * self.ActorModGetMultiplier(Who,"Testicle.ScaleMax")))
 
 	self.BoneSetScale(Who,"NPC GenitalsScrotum [GenScrot]","SGO.Scale",Testicle)
 	Return
@@ -1802,7 +1816,7 @@ Float Function ActorGemGetTime(Actor Who)
 
 	;; the mod is 0 when empty. if we have a total of 1.5 that means i want
 	;; 150% more time spent to mature the gem.
-	Return self.OptGemMatureTime * self.ActorModGetMultiplier(Who,"Gem.Rate")
+	Return self.OptGemMatureTime * (self.ActorModGetMultiplier(Who,"Gem.Rate") * -1)
 EndFunction
 
 Float Function ActorGemGetPercent(Actor Who)
@@ -2016,7 +2030,7 @@ EndFunction
 Float Function ActorMilkGetTime(Actor Who)
 {figure out how fast this actor is generating milk.}
 
-	Return (self.OptMilkProduceTime * self.ActorModGetMultiplier(Who,"Milk.Rate"))
+	Return (self.OptMilkProduceTime * (self.ActorModGetMultiplier(Who,"Milk.Rate") * -1))
 EndFunction
 
 Float Function ActorMilkGetPercent(Actor Who)
@@ -2201,7 +2215,7 @@ EndFunction
 Float Function ActorSemenGetTime(Actor Who)
 {figure out how fast this actor is generating semen.}
 
-	Return (self.OptSemenProduceTime * self.ActorModGetMultiplier(Who,"Semen.Rate"))
+	Return (self.OptSemenProduceTime * (self.ActorModGetMultiplier(Who,"Semen.Rate") * -1))
 EndFunction
 
 Float Function ActorSemenGetPercent(Actor Who)

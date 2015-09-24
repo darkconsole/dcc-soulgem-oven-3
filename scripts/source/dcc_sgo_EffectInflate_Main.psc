@@ -28,6 +28,7 @@ Event OnEffectStart(Actor Target, Actor From)
 		self.ValueMax += (self.Value - 1)
 	EndIf
 
+	self.ValueMax = SGO.BoneCurveValue(Target,"NPC Belly",self.ValueMax)
 	self.OnUpdate()
 	Return
 EndEvent
@@ -46,7 +47,7 @@ Event OnUpdate()
 	Else
 		self.Who.RemoveSpell(SGO.dcc_sgo_SpellInflate)
 
-		If(SGO.OptCumInflationHold)
+		If(SGO.OptCumInflationHold || self.Who != SGO.Player)
 			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflateTrigger)
 		Else
 			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflate,TRUE)
