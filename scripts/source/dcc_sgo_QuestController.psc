@@ -40,12 +40,12 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; Float    SGO.Actor.Fertility.Time - the last time actor's fertility updated.
 ;; Float    SGO.Actor.Fertility.Data - the fertility data for this actor.
 ;; String[x] SGO.Actor.Mod.Belly.Encumber
-;; String[+] SGO.Actor.Mod.Belly.Scale
+;; String[x] SGO.Actor.Mod.Belly.Scale
 ;; String[x] SGO.Actor.Mod.Belly.ScaleMax
 ;; String[x] SGO.Actor.Mod.Breast.Influence
-;; String[+] SGO.Actor.Mod.Breast.Scale
+;; String[x] SGO.Actor.Mod.Breast.Scale
 ;; String[x] SGO.Actor.Mod.Breast.ScaleMax
-;; String[+] SGO.Actor.Mod.Testicle.Scale
+;; String[x] SGO.Actor.Mod.Testicle.Scale
 ;; String[x] SGO.Actor.Mod.Testicle.ScaleMax
 ;; String[x] SGO.Actor.Mod.Gem.Capacity (multiply %)
 ;; String[x] SGO.Actor.Mod.Gem.Rate (multiply %)
@@ -180,31 +180,31 @@ SexLabFramework Property SexLab Auto Hidden
 dcc_sgo_QuestController_UpdateLoop Property UpdateLoop Auto
 {the script that will handle the update queue. set via ck.}
 
-Perk Property dcc_sgo_PerkCannotProduceGems Auto
+Faction Property dcc_sgo_FactionCannotProduceGems Auto
 {prevent an actor from producing gems if it normally could.}
 
-Perk Property dcc_sgo_PerkCanProduceGems Auto
+Faction Property dcc_sgo_FactionCanProduceGems Auto
 {allow an actor to produce gems if it normally could not.}
 
-Perk Property dcc_sgo_PerkCannotProduceMilk Auto
+Faction Property dcc_sgo_FactionCannotProduceMilk Auto
 {prevent an actor from producing milk if it normally could.}
 
-Perk Property dcc_sgo_PerkCanProduceMilk Auto
+Faction Property dcc_sgo_FactionCanProduceMilk Auto
 {allow an actor to produce milk if it normally could not}
 
-Perk Property dcc_sgo_PerkCannotInseminate Auto
+Faction Property dcc_sgo_FactionCannotInseminate Auto
 {prevent an actor from inseminating others if it normally could.}
 
-Perk Property dcc_sgo_PerkCanInseminate Auto
+Faction Property dcc_sgo_FactionCanInseminate Auto
 {allow an actor to inseminate others if it normally could not.}
 
-Perk Property dcc_sgo_PerkDisableScaleBreast Auto
+Faction Property dcc_sgo_FactionDisableScaleBreast Auto
 {prevent an actor from scaling the breast nodes.}
 
-Perk Property dcc_sgo_PerkDisableScaleBelly Auto
+Faction Property dcc_sgo_FactionDisableScaleBelly Auto
 {prevent an actor from scaling the belly node.}
 
-Perk Property dcc_sgo_PerkDisableScaleTesticle Auto
+Faction Property dcc_sgo_FactionDisableScaleTesticle Auto
 {prevent an actor from scaling the testicle node.}
 
 FormList Property dcc_sgo_ListMilkItems Auto
@@ -993,15 +993,15 @@ integer that defines the capaiblities of this actor.}
 		Value += self.BioIsBeast
 	EndIf
 
-	If((Sex != 1 || Who.HasPerk(self.dcc_sgo_PerkCanInseminate)) && !Who.HasPerk(self.dcc_sgo_PerkCannotInseminate))
+	If((Sex != 1 || Who.IsInFaction(self.dcc_sgo_FactionCanInseminate)) && !Who.IsInFaction(self.dcc_sgo_FactionCannotInseminate))
 		Value += self.BioInseminate
 	EndIf
 
-	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceGems)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceGems))
+	If((Sex == 1 || Who.IsInFaction(self.dcc_sgo_FactionCanProduceGems)) && !Who.IsInFaction(self.dcc_sgo_FactionCannotProduceGems))
 		Value += self.BioProduceGems
 	EndIf
 
-	If((Sex == 1 || Who.HasPerk(self.dcc_sgo_PerkCanProduceMilk)) && !Who.HasPerk(self.dcc_sgo_PerkCannotProduceMilk))
+	If((Sex == 1 || Who.IsInFaction(self.dcc_sgo_FactionCanProduceMilk)) && !Who.IsInFaction(self.dcc_sgo_FactionCannotProduceMilk))
 		Value += self.BioProduceMilk
 	EndIf
 
@@ -1015,30 +1015,30 @@ you must do each function individually.}
 	;; todo - re-engineer the inner workings of this method to allow
 	;; for a bitwise operation instead.
 
-	Perk ToEnable
-	Perk ToDisable
+	Faction ToEnable
+	Faction ToDisable
 
 	If(Func == self.BioProduceGems)
-		ToEnable = self.dcc_sgo_PerkCanProduceGems
-		ToDisable = self.dcc_sgo_PerkCannotProduceGems
+		ToEnable = self.dcc_sgo_FactionCanProduceGems
+		ToDisable = self.dcc_sgo_FactionCannotProduceGems
 	ElseIf(Func == self.BioProduceMilk)
-		ToEnable = self.dcc_sgo_PerkCanProduceMilk
-		ToDisable = self.dcc_sgo_PerkCannotProduceMilk
+		ToEnable = self.dcc_sgo_FactionCanProduceMilk
+		ToDisable = self.dcc_sgo_FactionCannotProduceMilk
 	ElseIf(Func == self.BioInseminate)
-		ToEnable = self.dcc_sgo_PerkCanInseminate
-		ToDisable = self.dcc_sgo_PerkCannotInseminate
+		ToEnable = self.dcc_sgo_FactionCanInseminate
+		ToDisable = self.dcc_sgo_FactionCannotInseminate
 	EndIf
 
 	If(Enable)
-		Who.RemovePerk(ToDisable)
-		Who.AddPerk(ToEnable)
+		Who.RemoveFromFaction(ToDisable)
+		Who.AddToFaction(ToEnable)
 
 		If(Func == self.BioInseminate)
 			self.ActorTrackForSemen(Who,TRUE)
 		EndIf
 	Else
-		Who.RemovePerk(ToEnable)
-		Who.AddPerk(ToDisable)
+		Who.RemoveFromFaction(ToEnable)
+		Who.AddToFaction(ToDisable)
 
 		If(Func == self.BioInseminate)
 			self.ActorTrackForSemen(Who,FALSE)
@@ -1061,13 +1061,13 @@ bitwise so you must do each function indivdually.}
 	Return
 EndFunction
 
-Function ActorTogglePerk(Actor Who, Perk What)
+Function ActorToggleFaction(Actor Who, Faction What)
 {toggle an actor's perk. any perk. whatever.}
 
-	If(Who.HasPerk(What))
-		Who.RemovePerk(What)
+	If(Who.IsInFaction(What))
+		Who.RemoveFromFaction(What)
 	Else
-		Who.AddPerk(What)
+		Who.AddToFaction(What)
 	EndIf
 
 	Return
@@ -1522,7 +1522,7 @@ EndFunction
 Function ActorBodyUpdate_BellyScale(Actor Who)
 {handle the physical representation of the belly.}
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBelly))
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleBelly))
 		Return
 	EndIf
 
@@ -1544,7 +1544,7 @@ EndFunction
 Function ActorBodyUpdate_BreastScale(Actor Who)
 {handle the physical representation of the breasts.}
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBreast))
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleBreast))
 		Return
 	EndIf
 
@@ -1564,7 +1564,7 @@ EndFunction
 Function ActorBodyUpdate_TesticleScale(Actor Who)
 {handle the physical representation of the breasts.}
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleTesticle))
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleTesticle))
 		Return
 	EndIf
 	
@@ -3228,31 +3228,31 @@ Function MenuActorOptions_Construct(Actor Who)
 	;;;;;;;;
 
 	Bool ItemNodeBreastEnable = TRUE
-	String ItemNodeBreastLabel = "Breast Scale OFF"
+	String ItemNodeBreastLabel = "Breast Scale ON"
 	String ItemNodeBreastText = "Pevent scaling of Breasts."
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBreast))
-		ItemNodeBreastLabel = "Breast Scale ON"
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleBreast))
+		ItemNodeBreastLabel = "Breast Scale OFF"
 	EndIf
 
 	;;;;;;;;
 
 	Bool ItemNodeBellyEnable = TRUE
-	String ItemNodeBellyLabel = "Belly Scale OFF"
+	String ItemNodeBellyLabel = "Belly Scale ON"
 	String ItemNodeBellyText = "Pevent scaling of Belly."
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleBelly))
-		ItemNodeBellyLabel = "Belly Scale ON"
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleBelly))
+		ItemNodeBellyLabel = "Belly Scale is OFF"
 	EndIf
 
 	;;;;;;;;
 
 	Bool ItemNodeTesticleEnable = TRUE
-	String ItemNodeTesticleLabel = "Testicle Scale OFF"
+	String ItemNodeTesticleLabel = "Testicle Scale ON"
 	String ItemNodeTesticleText = "Pevent scaling of Testicles."
 
-	If(Who.HasPerk(self.dcc_sgo_PerkDisableScaleTesticle))
-		ItemNodeTesticleLabel = "Testicle Scale ON"
+	If(Who.IsInFaction(self.dcc_sgo_FactionDisableScaleTesticle))
+		ItemNodeTesticleLabel = "Testicle Scale OFF"
 	EndIf
 
 	;;;;;;;;
@@ -3289,11 +3289,11 @@ Function MenuActorOptions_Handle(Actor Who)
 	ElseIf(Result == 2)
 		self.ActorToggleBiologicalFunction(Who,self.BioInseminate)
 	ElseIf(Result == 4)
-		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleBelly)
+		self.ActorToggleFaction(Who,self.dcc_sgo_FactionDisableScaleBelly)
 	ElseIf(Result == 5)
-		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleBreast)
+		self.ActorToggleFaction(Who,self.dcc_sgo_FactionDisableScaleBreast)
 	ElseIf(Result == 6)
-		self.ActorTogglePerk(Who,self.dcc_sgo_PerkDisableScaleTesticle)
+		self.ActorToggleFaction(Who,self.dcc_sgo_FactionDisableScaleTesticle)
 	ElseIf(Result == 7)
 		self.MenuMain(Who)
 	EndIf
