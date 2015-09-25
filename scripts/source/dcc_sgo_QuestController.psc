@@ -23,6 +23,13 @@ Scriptname dcc_sgo_QuestController extends Quest
 ;; THERE ARE ONLY 6 SOULGEM
 ;; MODELS.
 
+Int Function GetVersion() Global
+{report a version number. this is new to sgo3. the first public release will
+report 300, following the same system i have for the versioning in the past.}
+
+  Return -300
+EndFunction
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; StorageUtil Keys (Global) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; FormList SGO.ActorList.Gem - list all actors currently growing gems.
@@ -496,12 +503,42 @@ Function ResetMod_Events()
 	Return
 EndFunction
 
-Function UninstallMod()
+Function UninstallMod(Bool Prompt=TRUE)
 {delete all the data that it can from storageutil.}
 
+	StorageUtil.ClearAllPrefix("SGO.")
+	self.OK = FALSE
+	self.Enabled = FALSE
 
+	If(Prompt)
+		String Msg = "All SGO3 data has been removed from your co-save. "
+		Msg += "Close all menus, save your game, and then it is safe to "
+		Msg += "remove the mod files from your computer."
+
+		Debug.MessageBox(Msg)
+	EndIf
 
 	Return
+EndFunction
+
+Function ReinstallMod() 
+{attempt to seriously reinstall this mod to make it feel like a new game.
+blow anyway all previous data and reset.}
+
+	self.UninstallMod(FALSE)
+	self.ResetMod()
+
+	Return
+EndFunction
+
+Function ResetActor(Actor Who)
+{delete all the data in storage util for a specific actor to make it like sgo
+never even touched it.}
+
+     ;; ask ashal why there is no ClearAllPrefix that works with the object to
+     ;; provide scope before i go writing a 50 line long clear func.
+
+     Return
 EndFunction
 
 ;/*****************************************************************************

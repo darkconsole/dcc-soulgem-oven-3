@@ -123,7 +123,9 @@ Event OnOptionSelect(Int Item)
 		Val = !SGO.Enabled
 		SGO.Enabled = Val
 	ElseIf(Item == ItemUninstall)
-		;; perform uninstall operation.
+		SGO.UninstallMod()
+		self.SetToggleOptionValue(Item,TRUE)
+		Utility.Wait(0.1)
 
 	;; ShowPagePregnancy()
 	ElseIf(Item == ItemGemFilled)
@@ -158,7 +160,7 @@ Event OnOptionSelect(Int Item)
 		Val = !SGO.OptDebug
 		SGO.OptDebug = Val
 	ElseIf(Item == ItemKickThingsWithHavok)
-		Val = !SGO.Opt.OptKickThingsWithHavok
+		Val = !SGO.OptKickThingsWithHavok
 		SGO.OptKickThingsWithHavok = Val
 	EndIf
 
@@ -525,7 +527,7 @@ Function ShowPageGeneral()
 	self.AddHeaderOption("Mod Control")
 		self.AddHeaderOption("")
 	ItemEnabled = self.AddToggleOption("Mod Enabled",SGO.Enabled)
-		ItemUninstall = self.AddToggleOption("Uninstall Mod",FALSE,OPTION_FLAG_DISABLED)
+		ItemUninstall = self.AddToggleOption("Uninstall Mod",FALSE)
 
 	Return
 EndFunction
