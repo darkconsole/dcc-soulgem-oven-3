@@ -1853,7 +1853,7 @@ Float Function ActorGemGetTime(Actor Who)
 
 	;; the mod is 0 when empty. if we have a total of 1.5 that means i want
 	;; 150% more time spent to mature the gem.
-	Return self.OptGemMatureTime * (self.ActorModGetMultiplier(Who,"Gem.Rate") * -1)
+	Return self.OptGemMatureTime * (self.ActorModGetMultiplier(Who,"Gem.Rate"))
 EndFunction
 
 Float Function ActorGemGetPercent(Actor Who)
@@ -2067,7 +2067,7 @@ EndFunction
 Float Function ActorMilkGetTime(Actor Who)
 {figure out how fast this actor is generating milk.}
 
-	Return (self.OptMilkProduceTime * (self.ActorModGetMultiplier(Who,"Milk.Rate") * -1))
+	Return (self.OptMilkProduceTime * (self.ActorModGetMultiplier(Who,"Milk.Rate")))
 EndFunction
 
 Float Function ActorMilkGetPercent(Actor Who)
@@ -2252,7 +2252,7 @@ EndFunction
 Float Function ActorSemenGetTime(Actor Who)
 {figure out how fast this actor is generating semen.}
 
-	Return (self.OptSemenProduceTime * (self.ActorModGetMultiplier(Who,"Semen.Rate") * -1))
+	Return (self.OptSemenProduceTime * (self.ActorModGetMultiplier(Who,"Semen.Rate")))
 EndFunction
 
 Float Function ActorSemenGetPercent(Actor Who)
