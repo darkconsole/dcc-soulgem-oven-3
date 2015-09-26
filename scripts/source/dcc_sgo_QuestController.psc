@@ -2038,7 +2038,7 @@ the type of milk that we should spawn in the world.}
 	Int Index
 
 	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Milk.Data",-1.0)
-  self.ActorBodyUpdate_BreastScale(Who)
+	self.ActorBodyUpdate_BreastScale(Who)
 
 	;; give a milk for normal races.
 	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
