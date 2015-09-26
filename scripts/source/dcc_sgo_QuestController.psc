@@ -1564,6 +1564,7 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 
 	Float Belly = self.ActorModGetMultiplier(Who,"Belly.Scale")
 	Int Count = StorageUtil.FloatListCount(Who,"SGO.Actor.Gem.Data")
+	Float ScaleMax = (self.OptScaleBellyMax * self.ActorModGetMultiplier(Who,"Belly.ScaleMax"))
 
 	;; with a max of six gems, max of 300% more visual
 	;; depending on how the visual results look we may want to curve this value.
@@ -1571,7 +1572,8 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 0 gems (( 0 / 36) * 3.0) + 1 == 1.0
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
-	Belly += ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * (self.OptScaleBellyMax * self.ActorModGetMultiplier(Who,"Belly.ScaleMax")))
+	Belly += ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * ScaleMax)
+	Belly = PapyrusUtil.ClampFloat(Belly,0.01,ScaleMax)
 
 	self.BoneSetScale(Who,"NPC Belly","SGO.Scale",Belly)
 	Return
@@ -1585,12 +1587,14 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 	EndIf
 
 	Float Breast = self.ActorModGetMultiplier(Who,"Breast.Scale")
+	Float ScaleMax = (self.OptScaleBreastMax * self.ActorModGetMultiplier(Who,"Breast.ScaleMax"))
 
 	;; with a max of 3 bottles, max of 200% more visual
 	;; 0 milk ((0 / 3) * 2.0) + 1 == 1.0
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
-	Breast += ((self.ActorMilkGetWeight(Who) / self.ActorMilkGetCapacity(Who)) * (self.OptScaleBreastMax * self.ActorModGetMultiplier(Who,"Breast.ScaleMax")))
+	Breast += ((self.ActorMilkGetWeight(Who) / self.ActorMilkGetCapacity(Who)) * ScaleMax)
+	Breast = PapyrusUtil.ClampFloat(Breast,0.01,ScaleMax)
 
 	self.BoneSetScale(Who,"NPC L Breast","SGO.Scale",Breast)
 	self.BoneSetScale(Who,"NPC R Breast","SGO.Scale",Breast)
@@ -1605,12 +1609,14 @@ Function ActorBodyUpdate_TesticleScale(Actor Who)
 	EndIf
 	
 	Float Testicle = self.ActorModGetMultiplier(Who,"Testicle.Scale")
+	Float ScaleMax = (self.OptScaleTesticleMax * self.ActorModGetMultiplier(Who,"Testicle.ScaleMax"))
 
 	;; with a max of 2 bottles, max of 200% more visual
 	;; 0 semen ((0 / 2) * 2.0) + 1 == 1.0
 	;; 2 semen ((2 / 2) * 2.0) + 1 == 3.0
 
-	Testicle += ((self.ActorSemenGetWeight(Who) / self.ActorSemenGetCapacity(Who)) * (self.OptScaleTesticleMax * self.ActorModGetMultiplier(Who,"Testicle.ScaleMax")))
+	Testicle += ((self.ActorSemenGetWeight(Who) / self.ActorSemenGetCapacity(Who)) * ScaleMax)
+	Testicle = PapyrusUtil.ClampFloat(Testicle,0.01,ScaleMax)
 
 	self.BoneSetScale(Who,"NPC GenitalsScrotum [GenScrot]","SGO.Scale",Testicle)
 	Return
