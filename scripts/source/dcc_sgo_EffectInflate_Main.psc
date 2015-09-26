@@ -47,7 +47,7 @@ Event OnUpdate()
 	Else
 		self.Who.RemoveSpell(SGO.dcc_sgo_SpellInflate)
 
-		If(SGO.OptCumInflationHold || self.Who != SGO.Player)
+		If(SGO.OptCumInflationHold && self.Who == SGO.Player)
 			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflateTrigger)
 		Else
 			self.Who.AddSpell(SGO.dcc_sgo_SpellDeflate,TRUE)

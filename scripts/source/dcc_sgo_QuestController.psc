@@ -153,7 +153,6 @@ EndFunction
 ;; their desire for production.
 ;;
 
-
 ;/*****************************************************************************
                                     __   __             
  .-----.----.-----.-----.-----.----|  |_|__.-----.-----.
@@ -1639,6 +1638,7 @@ Bool Function ActorGemAdd(Actor Who, Float Value=0.0)
 		self.Print(Who.GetDisplayName() + " is incubating another gem. (" + self.ActorGemGetCount(Who) + ")")	
 		self.ActorTrackForGems(Who,TRUE)
 		self.ActorTrackForMilk(Who,TRUE)
+		self.ActorBodyUpdate(Who)
 		Return TRUE
 	EndIf
 
@@ -1699,6 +1699,7 @@ remove the gem if it is that.}
 
 	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Gem.Data",0)
 	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Gem.Data",0)
+	self.ActorBodyUpdate_BellyScale(Who)
 
 	If(Value < 1.0)
 		;; return a random fragment if less than a gem.
@@ -2031,6 +2032,7 @@ the type of milk that we should spawn in the world.}
 	Int Index
 
 	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Milk.Data",-1.0)
+  self.ActorBodyUpdate_BreastScale(Who)
 
 	;; give a milk for normal races.
 	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
@@ -2202,6 +2204,7 @@ the type of semen that we should spawn in the world.}
 	Int Index
 
 	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Semen.Data",-1.0)
+	self.ActorBodyUpdate_TesticleScale(Who)
 
 	;; give a semen for normal races.
 	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
@@ -2393,7 +2396,6 @@ Function ActorActionBirth_Solo(Actor Source)
 		Utility.Wait(3.0)
 		self.ImmersiveSoundMoan(Source,TRUE)
 		self.ActorGemGiveTo(Source,None,1)
-		self.ActorBodyUpdate_BellyScale(Source)
 		Utility.Wait(3.0)
 		If(self.OptAnimationBirthing == -1)
 			self.ImmersiveAnimationBirthing(Source)
@@ -2457,7 +2459,6 @@ Function ActorActionMilk_Solo(Actor Source)
 		self.ImmersiveSoundMoan(Source,FALSE)
 		Utility.Wait(2.0)
 		self.ActorMilkGiveTo(Source,Dest,1)
-		self.ActorBodyUpdate_BreastScale(Source)
 		self.ImmersiveExpression(Source,FALSE)
 	EndWhile
 
@@ -2513,7 +2514,6 @@ Function ActorActionWank_Solo(Actor Source)
 		self.ImmersiveSoundMoan(Source,FALSE)
 		Utility.Wait(3.0)
 		self.ActorSemenGiveTo(Source,Dest,1)
-		self.ActorBodyUpdate_TesticleScale(Source)
 		self.ImmersiveExpression(Source,FALSE)
 		Utility.Wait(1.0)
 	EndWhile
@@ -2558,7 +2558,6 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 	Utility.Wait(3.0)
 
 	self.ActorGemAdd(Dest,self.GetGemValue(GemType))
-	self.ActorBodyUpdate_BellyScale(Dest)
 	self.ImmersiveSoundMoan(Dest)
 	Utility.Wait(2.0)
 
@@ -2595,7 +2594,6 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 	Utility.Wait(3.0)
 
 	self.ActorGemAdd(Dest,0)
-	self.ActorBodyUpdate_BellyScale(Dest)
 	self.ImmersiveSoundMoan(Dest)
 	Utility.Wait(2.0)
 
