@@ -27,7 +27,7 @@ Int Function GetVersion() Global
 {report a version number. this is new to sgo3. the first public release will
 report 300, following the same system i have for the versioning in the past.}
 
-  Return -300
+	Return -300
 EndFunction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -174,6 +174,9 @@ Actor Property Player Auto
 
 SexLabFramework Property SexLab Auto Hidden
 {the sexlab framework scripting. it will be set by the dependency checker.}
+
+Static Property StaticXMarker Auto
+{the xmarker from the game,}
 
 ;/*****************************************************************************
                     __      ___                           
@@ -646,6 +649,36 @@ value will be doubled.}
 	;; ((100 / 100) * 1) + 1 = 2.0
 
 	Return (((level / 100.0) * (value * factor)) + value) as Float
+EndFunction
+
+Function PlayDualAnimation(Actor Who1, String Ani1, Actor Who2, String Ani2)
+{rig up and play stacked dual animations. sex without the lab.}
+
+	ObjectReference Here = Who1.PlaceAtMe(self.StaticXMarker)
+	Who1.SetVehicle(Here)
+	Who2.SetVehicle(Here)
+
+	;; about face...
+	Who2.SetAngle(Who1.GetAngleX(),Who1.GetAngleY(),Who1.GetAngleZ())
+
+	;; commit hillarious collision hack: the slomoroto
+	Who1.SplineTranslateTo(Here.GetPositionX(),Here.GetPositionY(),Here.GetPositionZ(),Here.GetAngleX(),Here.GetAngleY(),(Here.GetAngleZ() + 0.01),1.0,500,0.001)
+	Who2.SplineTranslateTo(Here.GetPositionX(),Here.GetPositionY(),Here.GetPositionZ(),Here.GetAngleX(),Here.GetAngleY(),(Here.GetAngleZ() + 0.01),1.0,500,0.001)
+
+	;; and animate.
+	Debug.SendAnimationEvent(Who1,Ani1)
+	Debug.SendAnimationEvent(Who2,Ani2)
+
+	;; yoink.
+	Who1.SetVehicle(None)
+	Who2.SetVehicle(None)
+	Here.Delete()
+
+	;; honestly i think the vehicle trick may not even be needed here.
+	;; i just emulated this after sexlab and cleaned it up a bit. the
+	;; slomoroto is the key here.
+
+	Return
 EndFunction
 
 ;; skeleton manipulation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1692,29 +1725,20 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 	Return
 EndFunction
 
-Form Function ActorGemRemove(Actor Who, Int ValueOfGem=-1)
+Form Function ActorGemRemove(Actor Who)
 {remove the next gem from the specified actor. returns a form describing
 what object we should spawn in the world. this will be used mostly by the
 gem place and gem give functions. if the value is provided it will only
 remove the gem if it is that.}
 
-	If(self.ActorGemGetCount(Who) == 0)
-		;; an empty form if no gems.
+	Float Value = self.ActorGemRemoveFloat(Who)
+	If(Value == -1)
 		Return None
 	EndIf
-
-	Float Value = StorageUtil.FloatListGet(Who,"SGO.Actor.Gem.Data",0)
-	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Gem.Data",0)
-	self.ActorBodyUpdate_BellyScale(Who)
 
 	If(Value < 1.0)
 		;; return a random fragment if less than a gem.
 		Return self.dcc_sgo_ListGemFragment.GetAt(Utility.RandomInt(0,(self.dcc_sgo_ListGemFragment.GetSize() - 1))) as Form
-	EndIf
-
-	If(Value > 6.0)
-		;; cap the value for overtimed gems.
-		Value = 6
 	EndIf
 
 	If(self.OptGemFilled)
@@ -1722,6 +1746,24 @@ remove the gem if it is that.}
 	Else
 		Return self.dcc_sgo_ListGemEmpty.GetAt(Value as Int - 1)
 	EndIf
+EndFunction
+
+Float Function ActorGemRemoveFloat(Actor Who)
+
+	If(self.ActorGemGetCount(Who) == 0)
+		Return -1
+	EndIf
+
+	;; get the first thing.
+	Float Value = PapyrusUtil.ClampFloat(StorageUtil.FloatListGet(Who,"SGO.Actor.Gem.Data",0),0.0,6.0)
+
+	;; the first thing off.
+	StorageUtil.FloatListRemoveAt(Who,"SGO.Actor.Gem.Data",0)
+
+	;; prompt a visual update.
+	self.ActorBodyUpdate_BellyScale(Who)
+
+	Return Value
 EndFunction
 
 Form Function ActorGemRemoveFromInventory(Actor Who, Int Size)
@@ -2424,9 +2466,46 @@ EndFunction
 Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 {dual actor birthing sequence. i plan this to be the transfer animation.}
 
-	;; todo
+	self.BehaviourDefault(Source)
+	self.BehaviourDefault(Dest)
+	self.ActorRemoveChestpiece(Source)
+	self.ActorRemoveChestpiece(Dest)
 
-	return
+	If(Source == self.Player || Dest == self.Player)
+		MiscUtil.SetFreeCameraState(TRUE,7.0)
+	EndIf
+
+	self.PlayDualAnimation(Source,"SGO_Transfer_A1",Dest,"SGO_Transfer_A2")
+	While(self.ActorGemGetCount(Source) > 0 && self.ActorGemGetCount(Dest) < self.ActorGemGetCapacity(Dest))
+		Utility.Wait(3.0)
+		self.ImmersiveBlush(Source,1.0,3,3.0)
+		Utility.Wait(3.0)
+		self.ImmersiveExpression(Source,TRUE)
+		self.ImmersiveSoundMoan(Source,FALSE)
+		Utility.Wait(0.5)
+		self.ImmersiveBlush(Dest,1.0,3,3.0)
+		self.ImmersiveExpression(Dest,TRUE)
+		self.ImmersiveSoundMoan(Dest,TRUE)
+		self.ActorGemAdd(Dest,self.ActorGemRemoveFloat(Source))
+		Utility.Wait(3.0)
+		self.ImmersiveExpression(Source,FALSE)
+		self.ImmersiveExpression(Dest,FALSE)
+	EndWhile
+
+	If(Source == self.Player || Dest == self.Player)
+		MiscUtil.SetFreeCameraState(FALSE)
+	EndIf
+
+	self.ImmersiveExpression(Source,FALSE)
+	self.ImmersiveExpression(Dest,FALSE)
+	self.ImmersiveAnimationIdle(Source)
+	self.ImmersiveAnimationIdle(Dest)
+	self.ActorReplaceChestpiece(Source)
+	self.ActorReplaceChestpiece(Dest)
+	self.BehaviourClear(Source,TRUE)
+	self.BehaviourClear(Dest,TRUE)
+
+	Return
 EndFunction
 
 Function ActorActionMilk(Actor Source, Actor Dest)
@@ -2858,8 +2937,9 @@ Function ImmersiveAnimationIdle(Actor Who)
 
 	self.ImmersiveSheatheWeapon(Who)
 
+	Who.StopTranslation()
 	Debug.SendAnimationEvent(who,"IdleForceDefaultState")
-	;;Who.SetAngle(Who.GetAngleX(),Who.GetAngleY(),(Who.GetAngleZ() + 180.0))
+
 	Return
 EndFunction
 
@@ -3043,13 +3123,26 @@ Function MenuMain_Construct(Actor Who)
 
 	;;;;;;;;
 
+	Bool ItemTransferEnable = FALSE
+	String ItemTransferLabel = "No Target."
+	String ItemTransferText  = "Transfer gems from one to another."
+
+	If(Who != self.Player)
+		ItemTransferEnable = TRUE
+		ItemTransferLabel = "Transfer..."
+	EndIf
+
+	;;;;;;;;
+
 	UIExtensions.InitMenu("UIWheelMenu")
-	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable)
-	self.MenuWheelSetItem(1,ItemSemenLabel,ItemSemenText,ItemSemenEnable)
-	self.MenuWheelSetItem(3,"Actor Options...","Set advanced options.",TRUE)
-	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable)
-	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable)
-	self.MenuWheelSetItem(6,ItemWankLabel,ItemWankText,ItemWankEnable)
+	self.MenuWheelSetItem(0,ItemGemLabel,ItemGemText,ItemGemEnable) ;; insert gem
+	self.MenuWheelSetItem(1,ItemTransferLabel,ItemTransferText,ItemTransferEnable) ;; transfer gems
+	self.MenuWheelSetItem(2,ItemSemenLabel,ItemSemenText,ItemSemenEnable) ;; insert semen
+	self.MenuWheelSetItem(3,"Actor Options...","Set advanced options.",TRUE) ;; actor options
+
+	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable) ;; gem status + birth
+	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable) ;; milk status + milk
+	self.MenuWheelSetItem(6,ItemWankLabel,ItemWankText,ItemWankEnable) ;; semen status + wank
 	Return
 EndFunction
 
@@ -3066,6 +3159,8 @@ Function MenuMain_Handle(Actor Who)
 	If(Result == 0)
 		self.MenuSoulgemInsert(Who)
 	ElseIf(Result == 1)
+		self.MenuSoulgemTransfer(Who)
+	ElseIf(Result == 2)
 		self.MenuSemenInsert(Who)
 	ElseIf(Result == 3)
 		self.MenuActorOptions(Who)
@@ -3337,6 +3432,48 @@ Function MenuActorOptions_Handle(Actor Who)
 		self.ActorToggleFaction(Who,self.dcc_sgo_FactionDisableScaleTesticle)
 	ElseIf(Result == 7)
 		self.MenuMain(Who)
+	EndIf
+
+	Return
+EndFunction
+
+Function MenuSoulgemTransfer(Actor Who)
+
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	self.MenuSoulgemTransfer_Construct(Who)
+	self.MenuSoulgemTransfer_Handle(Who)
+	Return
+EndFunction
+
+Function MenuSoulgemTransfer_Construct(Actor Who)
+
+	UIExtensions.InitMenu("UIWheelMenu")
+	self.MenuWheelSetItem(2,"Give To...","Give gems to target.",TRUE)
+	self.MenuWheelSetItem(6,"Take From...","Take gems from the target.",TRUE)
+
+	Return
+EndFunction
+
+Function MenuSoulgemTransfer_Handle(Actor Who)
+
+	self.ImmersiveMenuCamera(TRUE)
+	self.dcc_sgo_ImodMenu.Apply(1.0)
+	Utility.Wait(0.25)
+
+	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+	self.ImmersiveMenuCamera(FALSE)
+
+	If(Result == 2)
+		self.ActorActionBirth(self.Player,Who)
+	ElseIf(Result == 6)
+		self.ActorActionBirth(Who,self.Player)
 	EndIf
 
 	Return
