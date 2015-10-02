@@ -2464,7 +2464,7 @@ Function ActorActionBirth_Solo(Actor Source)
 EndFunction
 
 Function ActorActionBirth_Duo(Actor Source, Actor Dest)
-{dual actor birthing sequence. i plan this to be the transfer animation.}
+{dual actor birthing sequence - aka transfer from one to another.}
 
 	self.BehaviourDefault(Source)
 	self.BehaviourDefault(Dest)

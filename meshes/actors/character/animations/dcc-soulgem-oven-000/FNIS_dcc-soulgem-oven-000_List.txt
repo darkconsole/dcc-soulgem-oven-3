@@ -1,5 +1,5 @@
 Version 300
 
-b SGO_Transfer_A1 Transfer_A1.hkx
-b SGO_Transfer_A2 Transfer_A2.hkx
+b SGO_Transfer_A1 hkx\Transfer_A1.hkx
+b SGO_Transfer_A2 hkx\Transfer_A2.hkx
 
