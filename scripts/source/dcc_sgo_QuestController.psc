@@ -390,6 +390,11 @@ Float Property OptUpdateInterval = 20.0 Auto Hidden
 Float Property OptUpdateDelay = 0.125 Auto Hidden
 {how long to delay the update loop each iteration.}
 
+Bool Property OptValidateActor = TRUE Auto Hidden
+{used to disable the use of sexlab's validate actor to debug why an actor may
+not be working. usually because its a creature that has no animation or
+someshit like that.}
+
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Int Property BioProduceGems = 1  AutoReadOnly
@@ -2985,6 +2990,10 @@ EndFunction
 Function ImmersiveMenuCamera(Bool Enable)
 {move the camera when the menu opens.}
 
+  ;; disabling this because apparently i am the only one it is
+  ;; working for correctly.
+  Return
+
 	Int Camera = Game.GetCameraState()
 	If(Camera != 5 && Camera != 8 && Camera != 9 && Camera != 10)
 		self.PrintDebug("not in third person")
@@ -3053,6 +3062,12 @@ Function MenuMain(Actor Who=None)
 	If(Who == None)
 		Who = self.Player
 	EndIf
+
+	If(self.OptValidateActor && !SexLab.IsValidActor(Who))
+		self.PrintDebug(Who.GetDisplayName() + " is not SexLab Valid.")
+		Return
+	EndIf
+
 
 	self.MenuMain_Construct(Who)
 	self.MenuMain_Handle(Who)
