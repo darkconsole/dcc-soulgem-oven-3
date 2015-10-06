@@ -1056,11 +1056,24 @@ EndFunction
                                                         
 *****************************************************************************/;
 
-Int Function ActorGetBiologicalFunctions(Actor Who)
+Int Function ActorGetBiologicalFunctions(Actor Who, Bool Cached=TRUE)
 {determine what this actor's body is able to accomplish. returns a bitwised
 integer that defines the capaiblities of this actor.}
 
+  
+
 	Int Value = 0
+
+	If(Cached)
+		Value = StorageUtil.GetIntValue(Who,"SGO.Actor.Biologicalfunctions",0)
+		If(Value != 0)
+			;; if we found cached data use it. this should prevent us getting our
+			;; shit reset while in a temporary state like vampire lord or werewolf.
+			;; also, speed.
+			Return Value
+		EndIf
+	EndIf
+
 	Int Sex = SexLab.GetGender(Who)
 
 	If(Sex == 2)
@@ -1078,6 +1091,8 @@ integer that defines the capaiblities of this actor.}
 	If((Sex == 1 || Who.IsInFaction(self.dcc_sgo_FactionCanProduceMilk)) && !Who.IsInFaction(self.dcc_sgo_FactionCannotProduceMilk))
 		Value += self.BioProduceMilk
 	EndIf
+
+	StorageUtil.SetIntValue(Who,"SGO.Actor.Biologicalfunctions",Value)
 
 	Return Value
 EndFunction
@@ -1119,6 +1134,8 @@ you must do each function individually.}
 		EndIf
 	EndIf
 
+	;; update cached value.
+	self.ActorGetBiologicalFunctions(Who,FALSE)
 	Return
 EndFunction
 
