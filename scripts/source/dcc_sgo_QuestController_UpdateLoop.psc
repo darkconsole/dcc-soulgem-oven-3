@@ -51,7 +51,7 @@ Function OnUpdate_GemData()
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Gem",x) as Actor
 
-		If(Who)
+		If(Who && Who.Is3DLoaded())
 			;;SGO.PrintDebug("Update Gem Data " + Who.GetDisplayName())
 			SGO.ActorGemUpdateData(Who)
 			SGO.ActorApplyBellyEncumber(Who)
@@ -79,7 +79,7 @@ Function OnUpdate_MilkData()
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Milk",x) as Actor
 
-		If(Who)
+		If(Who && Who.Is3DLoaded())
 			;; SGO.PrintDebug("Update Milk Data " + Who.GetDisplayName())
 			SGO.ActorMilkUpdateData(Who)
 			SGO.ActorApplyBreastInfluence(Who)
@@ -105,7 +105,7 @@ Function OnUpdate_SemenData()
 	While(x < Count)
 		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Semen",x) as Actor
 
-		If(Who)
+		If(Who && Who.Is3DLoaded())
 			SGO.ActorSemenUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
