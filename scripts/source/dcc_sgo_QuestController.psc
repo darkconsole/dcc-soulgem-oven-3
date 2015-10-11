@@ -659,6 +659,14 @@ EndFunction
 Function PlayDualAnimation(Actor Who1, String Ani1, Actor Who2, String Ani2)
 {rig up and play stacked dual animations. sex without the lab.}
 
+	If(self.ActorNoAnimate(Who1))
+		Return
+	EndIf
+
+	If(self.ActorNoAnimate(Who2))
+		Return
+	EndIf
+
 	ObjectReference Here = Who1.PlaceAtMe(self.StaticXMarker)
 	Who1.SetVehicle(Here)
 	Who2.SetVehicle(Here)
@@ -1405,6 +1413,28 @@ needed.}
 	Who.ModActorValue("CarryWeight",-1.0)
 
 	Return
+EndFunction
+
+Bool Function ActorNoAnimate(Actor Who)
+{check if there is a reason this actor should not be animated. returns true if it
+shoudl not be animated, returns false if it is safe to animate.}
+
+	;; todo - add no animate faction so that sgo can be told not to animate
+	;; actors. this will allow players to set the flag and me not have to
+	;; add support for every mod under the sun.
+
+	;; support for old Display Model.
+	If(StorageUtil.GetIntValue(Who,"IsBoundStrict") == 1)
+		Return TRUE
+	EndIf
+
+	Return FALSE
+EndFunction
+
+Bool Function ActorCanAnimate(Actor Who)
+{the inverse of no animate. literally.}
+
+	Return !self.ActorNoAnimate(Who)
 EndFunction
 
 ;/*****************************************************************************
@@ -2898,6 +2928,11 @@ EndFunction
 
 Function ImmersiveAnimationBirthing(Actor Who)
 {play a birthing animation on the actor.}
+
+	If(self.ActorNoAnimate(Who))
+		Return
+	EndIf
+
 	self.ImmersiveSheatheWeapon(Who)
 
 	;;;;;;;;
@@ -2954,8 +2989,12 @@ Function ImmersiveAnimationBirthing(Actor Who)
 	Return
 EndFunction
 
-Function ImmersiveAnimationIdle(Actor Who)
+Function ImmersiveAnimationIdle(Actor Who, Bool Force=false)
 {play the idle animation on an actor.}
+
+	If(!Force && self.ActorNoAnimate(Who))
+		Return
+	EndIf
 
 	self.ImmersiveSheatheWeapon(Who)
 
@@ -2968,6 +3007,10 @@ EndFunction
 Function ImmersiveAnimationMilking(Actor Who)
 {play the milking animation on an actor.} 
 
+	If(self.ActorNoAnimate(Who))
+		Return
+	EndIf
+
 	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"ZaZAPCHorFC")
 	Return
@@ -2975,6 +3018,10 @@ EndFunction
 
 Function ImmersiveAnimationWanking(Actor Who)
 {play the milking animation on an actor.} 
+
+	If(self.ActorNoAnimate(Who))
+		Return
+	EndIf
 
 	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"Arrok_MaleMasturbation_A1_S1")
@@ -2984,6 +3031,10 @@ EndFunction
 
 Function ImmersiveAnimationInsertion(Actor Who)
 {play the insertion animation on an actor.} 
+
+	If(self.ActorNoAnimate(Who))
+		Return
+	EndIf
 
 	self.ImmersiveSheatheWeapon(Who)
 	Debug.SendAnimationEvent(Who,"ZaZAPCHorFA")
