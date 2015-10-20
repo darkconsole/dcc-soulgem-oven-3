@@ -1014,6 +1014,19 @@ Function EventSend_OnSemenProgress(Actor Who, Int Progress)
 	Return
 EndFunction
 
+Function EventSend_OnBirthing(Actor Who)
+{emit an event stating that we are birthing.}
+
+	Int e = ModEvent.Create("SGO.OnBirthing")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
 Function EventSend_OnBirthed(Actor Who, Form What)
 {emit an event stating the gem an actor just birthed.}
 
@@ -1024,6 +1037,19 @@ Function EventSend_OnBirthed(Actor Who, Form What)
 
 	ModEvent.PushForm(e,Who)
 	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnMilking(Actor Who)
+{emit an event stating that we are milking.}
+
+	Int e = ModEvent.Create("SGO.OnMilking")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
 	ModEvent.Send(e)
 	Return
 EndFunction
@@ -1042,10 +1068,79 @@ Function EventSend_OnMilked(Actor Who, Form What)
 	Return
 EndFunction
 
+Function EventSend_OnWanking(Actor Who)
+{emit an event stating that we are wanking.}
+
+	Int e = ModEvent.Create("SGO.OnWanking")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
 Function EventSend_OnWanked(Actor Who, Form What)
 {emit an event stating a bottle of semen was just wanked.}
 
 	Int e = ModEvent.Create("SGO.OnWanked")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnInserting(Actor Who, Form What)
+{emit an event stating we are inserting.}
+
+	Int e = ModEvent.Create("SGO.OnInserting")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnInserted(Actor Who, Form What)
+{emit an event staring we are done inserting.}
+
+	Int e = ModEvent.Create("SGO.OnInserted")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnInseminating(Actor Who, Form What)
+{emit an event stating we are inseminating.}
+
+	Int e = ModEvent.Create("SGO.OnInseminating")
+	If(!e)
+		Return
+	EndIf
+
+	ModEvent.PushForm(e,Who)
+	ModEvent.PushForm(e,What)
+	ModEvent.Send(e)
+	Return
+EndFunction
+
+Function EventSend_OnInseminated(Actor Who, Form What)
+{emit an event staing we are done inseminating.}
+
+	Int e = ModEvent.Create("SGO.OnInseminated")
 	If(!e)
 		Return
 	EndIf
@@ -1755,15 +1850,22 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 		self.ActorProgressEnchanting(Source,self.GetGemValue(GemType))
 
 		If(Dest == None)
-			;; without a destination drop the gem the ground.
-			ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
-			o.MoveToNode(Source,"NPC Pelvis [Pelv]")
-			o.SetActorOwner(self.Player.GetActorBase())
-			o.Enable()
 
-			If(self.OptKickThingsWithHavok)
-				Utility.Wait(0.25)
-				o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
+			If(self.ActorNoAnimate(Source))
+				Source.AddItem(GemType,1)
+				ObjectReference o = Source.DropObject(GemType,1)
+				o.SetActorOwner(self.Player.GetActorBase())
+			Else
+				;; without a destination drop the gem the ground.
+				ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
+				o.MoveToNode(Source,"NPC Pelvis [Pelv]")
+				o.SetActorOwner(self.Player.GetActorBase())
+				o.Enable()
+
+				If(self.OptKickThingsWithHavok)
+					Utility.Wait(0.25)
+					o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
+				EndIf
 			EndIf
 		Else
 			;; else put it in the bag.
@@ -2099,15 +2201,21 @@ same.}
 		self.ActorProgressAlchemy(Source)
 
 		If(Dest == None)
-			;; without a destination drop the milk the ground.
-			ObjectReference o = Source.PlaceAtMe(MilkType,1,FALSE,TRUE)
-			o.MoveToNode(Source,"Breast")
-			o.SetActorOwner(self.Player.GetActorBase())
-			o.Enable()
 
-			If(self.OptKickThingsWithHavok)
-				Utility.Wait(0.25)
-				o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
+			If(self.ActorNoAnimate(Source))
+				Source.AddItem(MilkType,1)
+				ObjectReference o = Source.DropObject(MilkType,1)
+				o.SetActorOwner(self.Player.GetActorBase())
+			Else
+				;; without a destination drop the milk the ground.
+				ObjectReference o = Source.PlaceAtMe(MilkType,1,FALSE,TRUE)
+				o.MoveToNode(Source,"Breast")
+				o.SetActorOwner(self.Player.GetActorBase())
+				o.Enable()
+				If(self.OptKickThingsWithHavok)
+					Utility.Wait(0.25)
+					o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
+				EndIf
 			EndIf
 		Else
 			;; else put it in their bag.
@@ -2487,7 +2595,7 @@ Function ActorActionBirth_Solo(Actor Source)
 	EndIf
 
 	While(self.ActorGemGetCount(Source) > 0)
-		Utility.Wait(3.0)
+		self.EventSend_OnBirthing(Source)
 		self.ImmersiveBlush(Source,1.0,3,3.0)
 		self.ImmersiveExpression(Source,FALSE)
 		Utility.Wait(3.0)
@@ -2529,7 +2637,7 @@ Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 
 	self.PlayDualAnimation(Source,"SGO_Transfer_A1",Dest,"SGO_Transfer_A2")
 	While(self.ActorGemGetCount(Source) > 0 && self.ActorGemGetCount(Dest) < self.ActorGemGetCapacity(Dest))
-		Utility.Wait(3.0)
+		self.EventSend_OnBirthing(Source)
 		self.ImmersiveBlush(Source,1.0,3,3.0)
 		Utility.Wait(3.0)
 		self.ImmersiveExpression(Source,TRUE)
@@ -2590,6 +2698,7 @@ Function ActorActionMilk_Solo(Actor Source)
 	self.ImmersiveAnimationMilking(Source)
 
 	While(self.ActorMilkGetWeight(Source) >= 1.0)
+		self.EventSend_OnMilking(Source)
 		self.ImmersiveBlush(Source)
 		Utility.Wait(2.0)
 		self.ImmersiveExpression(Source,TRUE)
@@ -2645,6 +2754,7 @@ Function ActorActionWank_Solo(Actor Source)
 	self.ImmersiveAnimationWanking(Source)
 
 	While(self.ActorSemenGetWeight(Source) >= 1.0)
+		self.EventSend_OnWanking(Source)
 		self.ImmersiveBlush(Source)
 		Utility.Wait(3.0)
 		self.ImmersiveExpression(Source,TRUE)
@@ -2686,6 +2796,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 	self.BehaviourDefault(Dest)
 	self.ActorRemoveChestpiece(Dest)
 	self.ImmersiveAnimationInsertion(Dest)
+	self.EventSend_OnInserting(Dest,GemType)
 	Source.RemoveItem(GemType,1)
 	Utility.Wait(3.0)
 
@@ -2698,6 +2809,7 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 	self.ImmersiveSoundMoan(Dest)
 	Utility.Wait(2.0)
 
+	self.EventSend_OnInserted(Dest,GemType)
 	self.ImmersiveAnimationIdle(Dest)
 	self.ImmersiveExpression(Dest,FALSE)
 	self.ActorReplaceChestpiece(Dest)
@@ -2722,6 +2834,7 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 	self.BehaviourDefault(Dest)
 	self.ActorRemoveChestpiece(Dest)
 	self.ImmersiveAnimationInsertion(Dest)
+	self.EventSend_OnInseminating(Dest,What)
 	Source.RemoveItem(What,1)
 	Utility.Wait(3.0)
 
@@ -2734,6 +2847,7 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 	self.ImmersiveSoundMoan(Dest)
 	Utility.Wait(2.0)
 
+	self.EventSend_OnInseminated(Dest,What)
 	self.ImmersiveAnimationIdle(Dest)
 	self.ImmersiveExpression(Dest,FALSE)
 	self.ActorReplaceChestpiece(Dest)
