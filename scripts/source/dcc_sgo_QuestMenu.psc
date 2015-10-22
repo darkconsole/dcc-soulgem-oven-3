@@ -29,7 +29,8 @@ Event OnGameReload()
 
 	parent.OnGameReload()
 
-	;; ...
+	;; do a dependency check every launch.
+	SGO.ResetMod_Prepare()
 
 	Return
 EndEvent

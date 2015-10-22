@@ -488,6 +488,7 @@ Function ResetMod_Spells()
 {force refresh of the spells.}
 
 	self.Player.RemoveSpell(self.dcc_sgo_SpellMenuMain)
+  Utility.Wait(1.0)
 	self.Player.AddSpell(self.dcc_sgo_SpellMenuMain,TRUE)
 
 	Return
