@@ -378,10 +378,13 @@ Float Property OptProgressEnchFactor = 1.0 Auto Hidden
 
 ;; mod options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Bool  Property OptDebug = TRUE Auto Hidden
+Bool Property OptDebug = TRUE Auto Hidden
 {print debugging information out to the console}
 
-Bool  Property OptKickThingsWithHavok = TRUE Auto Hidden
+Bool Property OptEnableMenuImod = FALSE Auto Hidden
+{if the purple fade should play and time wasted.}
+
+Bool Property OptKickThingsWithHavok = TRUE Auto Hidden
 {if dropped items should be kicked.}
 
 Float Property OptUpdateInterval = 20.0 Auto Hidden
@@ -3347,9 +3350,11 @@ EndFunction
 Function MenuMain_Handle(Actor Who)
 {handle the choice from the sgo menu.}
 
-	self.ImmersiveMenuCamera(TRUE)
-	self.dcc_sgo_ImodMenu.Apply(1.0)
-	Utility.Wait(0.25)
+	If(self.OptEnableMenuImod)
+		self.ImmersiveMenuCamera(TRUE)
+		self.dcc_sgo_ImodMenu.Apply(1.0)
+		Utility.Wait(0.25)
+	EndIf
 
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
 	self.ImmersiveMenuCamera(FALSE)
@@ -3420,9 +3425,11 @@ Function MenuSoulgemInsert_Handle(Actor Who)
 	Form[] List = self.ActorGemListInventory(self.Player)
 	Int Result
 
-	self.ImmersiveMenuCamera(TRUE)
-	self.dcc_sgo_ImodMenu.Apply(1.0)
-	Utility.Wait(0.25)
+	If(self.OptEnableMenuImod)
+		self.ImmersiveMenuCamera(TRUE)
+		self.dcc_sgo_ImodMenu.Apply(1.0)
+		Utility.Wait(0.25)
+	EndIf
 
 	UIExtensions.OpenMenu("UIListMenu",Who)
 	Result = UIExtensions.GetMenuResultInt("UIListMenu")
@@ -3485,9 +3492,11 @@ Function MenuSemenInsert_Handle(Actor Who)
 	Form[] List = self.ActorSemenListInventory(self.Player)
 	Int Result
 
-	self.ImmersiveMenuCamera(TRUE)
-	self.dcc_sgo_ImodMenu.Apply(1.0)
-	Utility.Wait(0.25)
+	If(self.OptEnableMenuImod)
+		self.ImmersiveMenuCamera(TRUE)
+		self.dcc_sgo_ImodMenu.Apply(1.0)
+		Utility.Wait(0.25)
+	EndIf
 
 	UIExtensions.OpenMenu("UIListMenu",Who)
 	Result = UIExtensions.GetMenuResultInt("UIListMenu")
@@ -3609,9 +3618,11 @@ EndFunction
 Function MenuActorOptions_Handle(Actor Who)
 {handle the actor option menu.}
 
-	self.ImmersiveMenuCamera(TRUE)
-	self.dcc_sgo_ImodMenu.Apply(1.0)
-	Utility.Wait(0.25)
+	If(self.OptEnableMenuImod)
+		self.ImmersiveMenuCamera(TRUE)
+		self.dcc_sgo_ImodMenu.Apply(1.0)
+		Utility.Wait(0.25)
+	EndIf
 
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
 	self.ImmersiveMenuCamera(FALSE)
@@ -3661,9 +3672,11 @@ EndFunction
 
 Function MenuSoulgemTransfer_Handle(Actor Who)
 
-	self.ImmersiveMenuCamera(TRUE)
-	self.dcc_sgo_ImodMenu.Apply(1.0)
-	Utility.Wait(0.25)
+	If(self.OptEnableMenuImod)
+		self.ImmersiveMenuCamera(TRUE)
+		self.dcc_sgo_ImodMenu.Apply(1.0)
+		Utility.Wait(0.25)
+	EndIf
 
 	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
 	self.ImmersiveMenuCamera(FALSE)
