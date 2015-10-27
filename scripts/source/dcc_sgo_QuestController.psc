@@ -1171,7 +1171,7 @@ do for the current scenerio.}
 
   ObjectReference ThisGuy
 
-  If(self.ActorNoAnimate(Who) || !self.OptKickThingsWithHavok)
+  If(self.ActorNoAnimate(Who) || !Kick)
     ThisGuy = self.ActorDropObject_Gentle(Who,What,Count)
   Else
     ThisGuy = self.ActorDropObject_Positioned(Who,What,"NPC Pelvis [Pelv]",Count,Kick)
