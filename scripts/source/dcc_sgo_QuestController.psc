@@ -698,6 +698,88 @@ Function PlayDualAnimation(Actor Who1, String Ani1, Actor Who2, String Ani2)
 	Return
 EndFunction
 
+ObjectReference Function ActorDropObject(Actor Who, Form What, Int Count=1, Bool Kick=TRUE)
+{place an object in the 3d world by the specified actor. this method will
+perform a few checks to determine the most immersive type of drop we should
+do for the current scenerio.}
+
+	ObjectReference ThisGuy
+
+	If(self.ActorNoAnimate(Who) || !self.OptKickThingsWithHavok)
+		ThisGuy = self.ActorDropObject_Gentle(Who,What,Count)
+	Else
+		ThisGuy = self.ActorDropObject_Positioned(Who,What,"NPC Pelvis [Pelv]",Count,Kick)
+	EndIf
+
+	Return ThisGuy
+EndFunction
+
+ObjectReference Function ActorDropObject_Gentle(Actor Source, Form What, Int Count=1)
+{place an object at the actor's feet in a way that should not cause havok to
+push the actor or various other things around the room. just like the normal
+actor methods this method only return the last item.}
+
+	;; however we perform the count in a loop so that we can update
+	;; options for all the objects dropped.
+
+	Int Iter = 0
+	ObjectReference ThisGuy
+
+	While(Iter < Count)
+		;; this process involves giving the actor one of the things.
+		Source.AddItem(What,1)
+
+		;; then using the drop function on the actor which places it
+		;; gently at their feet.
+		ThisGuy = Source.DropObject(What,1)
+
+		;; and we will apply the theft hack to stop you from getting
+		;; in trouble for picking it up.
+		ThisGuy.SetActorOwner(self.Player.GetActorBase())
+
+		Iter += 1
+	EndWhile
+
+	Return ThisGuy
+EndFunction
+
+ObjectReference Function ActorDropObject_Positioned(Actor Source, Form What, String Where, Int Count=1, Bool Kick=TRUE)
+{place an object at a specified bone location of an actor with an optional
+kick by havok.}
+
+	Int Iter = 0
+	ObjectReference ThisGuy
+
+	While(Iter < Count)
+
+		;; start by placing a disabled object at the actor.
+		ThisGuy = Source.PlaceAtMe(What,1,FALSE,TRUE)
+
+		;; move it to the specified location.
+		ThisGuy.MoveToNode(Source,Where)
+
+		;; apply the theft hack.
+		ThisGuy.SetActorOwner(self.Player.GetActorBase())
+
+		;; now we can enable it...
+		ThisGuy.Enable()
+
+		;; and kick it.
+		If(Kick)
+			Utility.Wait(0.05)
+
+			;; this is currently kicking it straight into the air.
+			;; todo: fancy math this more fancy than the code i stole two years
+			;; ago probably by checking node data via nio.
+			ThisGuy.ApplyHavokImpulse(0.0,0.0,1.0,20)
+		EndIf
+
+		Iter += 1
+	EndWhile
+
+	return ThisGuy
+EndFunction
+
 ;; skeleton manipulation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Function BoneCurveValue(Actor Who, String Bone, Float Value)
@@ -1851,31 +1933,13 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 			Return
 		EndIf
 
-		self.ActorProgressEnchanting(Source,self.GetGemValue(GemType))
-
 		If(Dest == None)
-
-			If(self.ActorNoAnimate(Source))
-				Source.AddItem(GemType,1)
-				ObjectReference o = Source.DropObject(GemType,1)
-				o.SetActorOwner(self.Player.GetActorBase())
-			Else
-				;; without a destination drop the gem the ground.
-				ObjectReference o = Source.PlaceAtMe(GemType,1,FALSE,TRUE)
-				o.MoveToNode(Source,"NPC Pelvis [Pelv]")
-				o.SetActorOwner(self.Player.GetActorBase())
-				o.Enable()
-
-				If(self.OptKickThingsWithHavok)
-					Utility.Wait(0.25)
-					o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,20.0)
-				EndIf
-			EndIf
+			self.ActorDropObject(Source,GemType,1,self.OptKickThingsWithHavok)
 		Else
-			;; else put it in the bag.
 			Dest.AddItem(GemType,1)
 		EndIf
 
+		self.ActorProgressEnchanting(Source,self.GetGemValue(GemType))
 		self.EventSend_OnBirthed(Source,GemType)
 		x += 1
 	EndWhile
@@ -2205,24 +2269,8 @@ same.}
 		self.ActorProgressAlchemy(Source)
 
 		If(Dest == None)
-
-			If(self.ActorNoAnimate(Source))
-				Source.AddItem(MilkType,1)
-				ObjectReference o = Source.DropObject(MilkType,1)
-				o.SetActorOwner(self.Player.GetActorBase())
-			Else
-				;; without a destination drop the milk the ground.
-				ObjectReference o = Source.PlaceAtMe(MilkType,1,FALSE,TRUE)
-				o.MoveToNode(Source,"Breast")
-				o.SetActorOwner(self.Player.GetActorBase())
-				o.Enable()
-				If(self.OptKickThingsWithHavok)
-					Utility.Wait(0.25)
-					o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
-				EndIf
-			EndIf
+			self.ActorDropObject(Source,MilkType,1,self.OptKickThingsWithHavok)
 		Else
-			;; else put it in their bag.
 			Dest.AddItem(MilkType,1)
 		EndIf
 
@@ -2382,19 +2430,8 @@ same.}
 		self.ActorProgressAlchemy(Source,0.75)
 
 		If(Dest == None)
-			;; without a destination drop the semen on the ground from the
-			;; tip of the penis for the lulz.
-			ObjectReference o = Source.PlaceAtMe(SemenType,1,FALSE,TRUE)
-			o.MoveToNode(Source,"NPC Genitals06 [Gen06]")
-			o.SetActorOwner(self.Player.GetActorBase())
-			o.Enable()
-
-			If(self.OptKickThingsWithHavok)
-				Utility.Wait(0.25)
-				o.ApplyHavokImpulse((Source.GetAngleX()-Math.sin(Source.GetAngleZ())),(Source.GetAngleY()-Math.cos(Source.GetAngleZ())),2.0,10.0)
-			EndIf
+			self.ActorDropObject(Source,SemenType,1,self.OptKickThingsWithHavok)
 		Else
-			;; else put it in their bag.
 			Dest.AddItem(SemenType,1)
 		EndIf
 
