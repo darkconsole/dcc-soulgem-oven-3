@@ -398,6 +398,10 @@ Bool Property OptValidateActor = TRUE Auto Hidden
 not be working. usually because its a creature that has no animation or
 someshit like that.}
 
+Bool Property OptUntamedPregChance = TRUE Auto Hidden
+{integrate with untamed so the untamed level increases pregchance with
+beasts.}
+
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Int Property BioProduceGems = 1  AutoReadOnly
@@ -938,9 +942,9 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	x = 0
 	While(x < ActorList.Length)
 		If(MaleCount > 0)
-			Preg = (Utility.RandomInt(0,100) <= (self.OptPregChanceHumanoid * self.ActorFertilityGetMod(ActorList[x])))
+			Preg = (Utility.RandomInt(0,100) <= self.ActorGetPregChance(ActorList[x],FALSE))
 		Else
-			Preg = (Utility.RandomInt(0,100) <= (self.OptPregChanceBeast * self.ActorFertilityGetMod(ActorList[x])))
+			Preg = (Utility.RandomInt(0,100) <= self.ActorGetPregChance(ActorList[x],TRUE))
 		EndIf
 
 		If(Preg)
@@ -968,6 +972,22 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 
 	Return
 EndEvent
+
+Float Function ActorGetPregChance(Actor Who, Bool Beast=FALSE)
+{determine the value to use for preg chancing.}
+
+	Float Base = self.OptPregChanceHumanoid as Float
+	If(Beast == TRUE)
+		Base = self.OptPregChanceBeast as Float
+	EndIf
+
+	If(self.OptUntamedPregChance)
+		;; an untamed level of 100 increases chance by 20%.
+		Base *= (StorageUtil.GetFloatValue(Who,"Untamed.Level",1.0) / 5)
+	EndIf
+
+	Return Base
+EndFunction
 
 Function EventSend_OnGemProgress(Actor Who, Int[] Progress)
 {emit an event listing the current state of the gems being carried.}
@@ -2630,8 +2650,6 @@ Function ActorActionBirth_Solo(Actor Source)
 	self.ActorRemoveChestpiece(Source)
 	self.ImmersiveAnimationBirthing(Source)
 
-	;;self.ImmersiveAboutFace(Source)
-
 	If(Source == self.Player)
 		MiscUtil.SetFreeCameraState(TRUE,7.0)
 	EndIf
@@ -2657,7 +2675,6 @@ Function ActorActionBirth_Solo(Actor Source)
 	EndIf
 
 	self.ImmersiveExpression(Source,FALSE)
-	self.ImmersiveAboutFace(Source)
 	self.ImmersiveAnimationIdle(Source)
 	self.ActorReplaceChestpiece(Source)
 	self.BehaviourClear(Source,TRUE)
@@ -2835,27 +2852,36 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 		Return
 	EndIf
 
-	self.BehaviourDefault(Dest)
-	self.ActorRemoveChestpiece(Dest)
-	self.ImmersiveAnimationInsertion(Dest)
-	self.EventSend_OnInserting(Dest,GemType)
-	Source.RemoveItem(GemType,1)
-	Utility.Wait(3.0)
-
-	self.ImmersiveExpression(Dest,TRUE)
-	self.ImmersiveSoundMoan(Dest,FALSE)
-	self.ImmersiveBlush(Dest)
-	Utility.Wait(3.0)
-
-	self.ActorGemAdd(Dest,self.GetGemValue(GemType))
-	self.ImmersiveSoundMoan(Dest)
-	Utility.Wait(2.0)
-
-	self.EventSend_OnInserted(Dest,GemType)
-	self.ImmersiveAnimationIdle(Dest)
-	self.ImmersiveExpression(Dest,FALSE)
-	self.ActorReplaceChestpiece(Dest)
-	self.BehaviourClear(Dest,TRUE)
+	If(self.ActorNoAnimate(Dest))
+		;; shorthand version if we cannot animate.
+		self.ImmersiveBlush(Dest)
+		self.ImmersiveSoundMoan(Dest,FALSE)
+		self.ImmersiveExpression(Dest,TRUE)
+		Source.RemoveItem(GemType,1)
+		self.ActorGemAdd(Dest,self.GetGemValue(GemType))
+		Utility.Wait(1.5)
+		self.ImmersiveExpression(Dest,FALSE)
+	Else
+		;; full scene.
+		self.BehaviourDefault(Dest)
+		self.ActorRemoveChestpiece(Dest)
+		self.ImmersiveAnimationInsertion(Dest)
+		self.EventSend_OnInserting(Dest,GemType)
+		Source.RemoveItem(GemType,1)
+		Utility.Wait(3.0)
+		self.ImmersiveExpression(Dest,TRUE)
+		self.ImmersiveSoundMoan(Dest,FALSE)
+		self.ImmersiveBlush(Dest)
+		Utility.Wait(3.0)
+		self.ActorGemAdd(Dest,self.GetGemValue(GemType))
+		self.ImmersiveSoundMoan(Dest)
+		Utility.Wait(2.0)
+		self.EventSend_OnInserted(Dest,GemType)
+		self.ImmersiveAnimationIdle(Dest)
+		self.ImmersiveExpression(Dest,FALSE)
+		self.ActorReplaceChestpiece(Dest)
+		self.BehaviourClear(Dest,TRUE)		
+	EndIf
 
 	Return
 EndFunction
@@ -2873,27 +2899,36 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 		Return
 	EndIf
 
-	self.BehaviourDefault(Dest)
-	self.ActorRemoveChestpiece(Dest)
-	self.ImmersiveAnimationInsertion(Dest)
-	self.EventSend_OnInseminating(Dest,What)
-	Source.RemoveItem(What,1)
-	Utility.Wait(3.0)
-
-	self.ImmersiveExpression(Dest,TRUE)
-	self.ImmersiveSoundMoan(Dest,FALSE)
-	self.ImmersiveBlush(Dest)
-	Utility.Wait(3.0)
-
-	self.ActorGemAdd(Dest,0)
-	self.ImmersiveSoundMoan(Dest)
-	Utility.Wait(2.0)
-
-	self.EventSend_OnInseminated(Dest,What)
-	self.ImmersiveAnimationIdle(Dest)
-	self.ImmersiveExpression(Dest,FALSE)
-	self.ActorReplaceChestpiece(Dest)
-	self.BehaviourClear(Dest,TRUE)
+	If(self.ActorNoAnimate(Dest))
+		;; short scene
+		self.ImmersiveBlush(Dest)
+		self.ImmersiveSoundMoan(Dest,FALSE)
+		self.ImmersiveExpression(Dest,TRUE)
+		Source.RemoveItem(What,1)
+		self.ActorGemAdd(Dest,0)
+		Utility.Wait(1.5)
+		self.ImmersiveExpression(Dest,FALSE)
+	Else
+		;; long scene
+		self.BehaviourDefault(Dest)
+		self.ActorRemoveChestpiece(Dest)
+		self.ImmersiveAnimationInsertion(Dest)
+		self.EventSend_OnInseminating(Dest,What)
+		Source.RemoveItem(What,1)
+		Utility.Wait(3.0)
+		self.ImmersiveExpression(Dest,TRUE)
+		self.ImmersiveSoundMoan(Dest,FALSE)
+		self.ImmersiveBlush(Dest)
+		Utility.Wait(3.0)
+		self.ActorGemAdd(Dest,0)
+		self.ImmersiveSoundMoan(Dest)
+		Utility.Wait(2.0)
+		self.EventSend_OnInseminated(Dest,What)
+		self.ImmersiveAnimationIdle(Dest)
+		self.ImmersiveExpression(Dest,FALSE)
+		self.ActorReplaceChestpiece(Dest)
+		self.BehaviourClear(Dest,TRUE)
+	EndIf
 
 	Return
 EndFunction
