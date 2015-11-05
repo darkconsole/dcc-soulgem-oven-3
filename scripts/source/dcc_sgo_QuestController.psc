@@ -973,22 +973,6 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	Return
 EndEvent
 
-Float Function ActorGetPregChance(Actor Who, Bool Beast=FALSE)
-{determine the value to use for preg chancing.}
-
-	Float Base = self.OptPregChanceHumanoid as Float
-	If(Beast == TRUE)
-		Base = self.OptPregChanceBeast as Float
-	EndIf
-
-	If(self.OptUntamedPregChance)
-		;; an untamed level of 100 increases chance by 20%.
-		Base *= (StorageUtil.GetFloatValue(Who,"Untamed.Level",1.0) / 5)
-	EndIf
-
-	Return Base
-EndFunction
-
 Function EventSend_OnGemProgress(Actor Who, Int[] Progress)
 {emit an event listing the current state of the gems being carried.}
 
@@ -1347,6 +1331,22 @@ you must do each function individually.}
 	;; update cached value.
 	self.ActorGetBiologicalFunctions(Who,FALSE)
 	Return
+EndFunction
+
+Float Function ActorGetPregChance(Actor Who, Bool Beast=FALSE)
+{determine the value to use for preg chancing.}
+
+	Float Base = self.OptPregChanceHumanoid as Float
+	If(Beast == TRUE)
+		Base = self.OptPregChanceBeast as Float
+	EndIf
+
+	If(Beast && self.OptUntamedPregChance)
+		;; an untamed level of 100 increases chance by 20%.
+		Base += PapyrusUtil.ClampFloat((StorageUtil.GetFloatValue(Who,"Untamed.Level",1.0) / 5),1,20)
+	EndIf
+
+	Return Base
 EndFunction
 
 Function ActorToggleBiologicalFunction(Actor Who, Int Func)
@@ -1764,6 +1764,21 @@ Function BehaviourDefault(Actor Who)
 	Return
 EndFunction
 
+Function PersistHackApply(Actor Who)
+{apply persistance hacks to keep temprorary actors alive.}
+
+	;;Who.UnregisterForModEvent("SGO.PersistHack")
+	;;Who.RegisterForModEvent("SGO.PersistHack","OnPersistHack")
+	Return
+EndFunction
+
+Function PersistHackClear(Actor Who)
+{clear the persistance hack.}
+
+	;;Who.UnregisterForModEvent("SGO.PersistHack")
+	Return
+EndFunction
+
 ;/*****************************************************************************
   __                   __    __                             __ 
  |  |_.----.---.-.----|  |--|__.-----.-----.   .---.-.-----|__|
@@ -1779,6 +1794,7 @@ Function ActorTrackForGems(Actor Who, Bool Enabled)
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceGems) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Gem",Who,False)
 		self.ActorSetTimeUpdated(Who,"SGO.Actor.Gem.Time")
+		self.PersistHackApply(Who)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",Who,True)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Gem.Time")
@@ -1794,6 +1810,7 @@ Function ActorTrackForMilk(Actor Who, Bool Enabled)
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceMilk) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,FALSE)
 		self.ActorSetTimeUpdated(Who,"SGO.Actor.Milk.Time")
+		self.PersistHackApply(Who)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,TRUE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Time")
@@ -1809,6 +1826,7 @@ Function ActorTrackForSemen(Actor Who, Bool Enabled)
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioInseminate) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Semen",Who,FALSE)
 		self.ActorSetTimeUpdated(Who,"SGO.Actor.Semen.Time")
+		self.PersistHackApply(Who)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",Who,FALSE)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Semen.Time")
