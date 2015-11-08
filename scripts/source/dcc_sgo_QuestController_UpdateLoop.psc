@@ -25,22 +25,35 @@ Event OnUpdate()
 		Return
 	EndIf
 
-	SGO.ActorFertilityUpdateData(SGO.Player)
+	;; maintenance.
+	self.OnUpdate_CleanLostData()
+	self.OnUpdate_CleanPersistHack()
 
+	;; data processing.
+	SGO.ActorFertilityUpdateData(SGO.Player)
 	self.OnUpdate_GemData()
 	self.OnUpdate_MilkData()
 	self.OnUpdate_SemenData()
+
 	self.RegisterForSingleUpdate(SGO.OptUpdateInterval)
 EndEvent
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-Function OnUpdate_GemData()
-{run through the list to process gem data for actors on the list.}
+Function OnUpdate_CleanLostData()
+{pull any lost references out of the lists.}
 
 	;; cleanup things the engine fucked us over.
 	StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",None,TRUE)
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",None,TRUE)
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",None,TRUE)
+
+	Return
+EndFunction
+
+Function OnUpdate_GemData()
+{run through the list to process gem data for actors on the list.}
 
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Gem")
 	Actor Who
@@ -67,9 +80,6 @@ EndFunction
 Function OnUpdate_MilkData()
 {run through the list to process the milk data for actors on the list.}
 
-	;; cleanup things the engine fucked us over.
-	StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",None,TRUE)
-
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Milk")
 	Actor Who
 
@@ -95,9 +105,6 @@ EndFunction
 Function OnUpdate_SemenData()
 {run through the list to process the semen data for actors on the list.}
 
-	;; cleanup things the engine fucked us over.
-	StorageUtil.FormListRemove(None,"SGO.ActorList.Semen",None,TRUE)
-
 	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Semen")
 	Actor Who
 
@@ -110,6 +117,37 @@ Function OnUpdate_SemenData()
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
 
+		x += 1
+	EndWhile
+
+	Return
+EndFunction
+
+Function OnUpdate_CleanPersistHack()
+{run through the list of persistance hacks to remove any that need to be
+removed.}
+
+	Int Count = StorageUtil.FormListCount(None,"SGO.ActorList.Persist")
+	Form Who
+
+	Int Gem
+	Int Milk
+	Int Semen
+
+	Int x = 0
+	While(x < Count)
+		Who = StorageUtil.FormListGet(None,"SGO.ActorList.Persist",x)
+
+		;; check if this actor exists in the other lists. if not, remove it.
+		Gem = StorageUtil.FormListFind(None,"SGO.ActorList.Gem",Who)
+		Milk = StorageUtil.FormListFind(None,"SGO.ActorList.Milk",Who)
+		Semen = StorageUtil.FormListFind(None,"SGO.ActorList.Semen",Who)
+
+		If(Gem == -1 && Milk == -1 && Semen == -1)
+			SGO.PersistHackClear(Who as Actor)
+		EndIf
+
+		Utility.Wait(SGO.OptUpdateDelay)
 		x += 1
 	EndWhile
 

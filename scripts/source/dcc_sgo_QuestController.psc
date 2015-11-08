@@ -484,7 +484,7 @@ Function ResetMod_Values()
 	self.OptImmersivePlayer = TRUE
 	self.OptImmersiveNPC = TRUE
 	self.OptDebug = TRUE
-  self.OptEnableMenuImod = FALSE
+	self.OptEnableMenuImod = FALSE
 	self.OptKickThingsWithHavok = TRUE
 	self.OptUpdateInterval = 20.0
 	self.OptUpdateDelay = 0.125
@@ -1767,15 +1767,20 @@ EndFunction
 Function PersistHackApply(Actor Who)
 {apply persistance hacks to keep temprorary actors alive.}
 
-	;;Who.UnregisterForModEvent("SGO.PersistHack")
-	;;Who.RegisterForModEvent("SGO.PersistHack","OnPersistHack")
+	Who.RegisterForUpdate(600)
+	StorageUtil.FormListAdd(None,"SGO.ActorList.Persist",Who,FALSE)
+	self.PrintDebug(Who.GetDisplayName() + " shall persist.")
+
 	Return
 EndFunction
 
 Function PersistHackClear(Actor Who)
 {clear the persistance hack.}
 
-	;;Who.UnregisterForModEvent("SGO.PersistHack")
+	Who.UnregisterForUpdate()
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Persist",Who,TRUE)
+	self.PrintDebug(Who.GetDisplayName() + " persist cleared.")
+
 	Return
 EndFunction
 
@@ -1835,7 +1840,6 @@ Function ActorTrackForSemen(Actor Who, Bool Enabled)
 		;; we want to keep the actual data so we can still use it for scale
 		;; computations later. we just want to stop iterating over them every
 		;; loop after they are full.
-
 	EndIf
 
 	Return
@@ -3004,7 +3008,7 @@ Function Immersive_OnMilkFull(Actor Who)
 		Msg[4] = "I bet I could get some great deals flashing these milkshakes around."
 		Msg[5] = "My back is sore from supporting these things."
 		Msg[6] = "These things are so full they are dribbling milk."
-		Msg[7] = "My boobs are so full. I wonder if anyone is thirty?" ;; chajapa
+		Msg[7] = "My boobs are so full. I wonder if anyone is thirsty?" ;; chajapa
 		Msg[8] = "I think my jugs are full." ;; chajapa
 		self.PrintRandom(Msg)
 	EndIf

@@ -123,6 +123,13 @@ Event OnOptionSelect(Int Item)
 	If(Item == ItemEnabled)
 		Val = !SGO.Enabled
 		SGO.Enabled = Val
+
+		If(SGO.Enabled)
+			SGO.RegisterForSingleUpdate(SGO.OptUpdateInterval)
+		Else
+			SGO.UnregisterForUpdate()
+		EndIf
+
 	ElseIf(Item == ItemUninstall)
 		SGO.UninstallMod()
 		self.SetToggleOptionValue(Item,TRUE)
