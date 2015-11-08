@@ -1775,10 +1775,41 @@ Function PersistHackApply(Actor Who)
 EndFunction
 
 Function PersistHackClear(Actor Who)
-{clear the persistance hack.}
+{clear the persistance hack. take into account known mods that also use this
+same persistance hack (more or less, mine only, for the time being) so that
+we don't fuck up those mods.}
+
+	StorageUtil.FormListRemove(None,"SGO.ActorList.Persist",Who,TRUE)
+
+	;; mods need to track their persistance hacking via a global scope form
+	;; list containing actor references if they want me to support it:
+	;; - to create and add to a list.
+	;;   StorageUtil.FormListAdd(None,"YourModKey",Actor,FALSE)
+	;; - to remove from a list.
+	;;   StorageUtil.FormListRemove(None,"YourModKey",Actor,TRUE)
+
+	;; other mods which implement this hack should have simliar as here
+	;; to make sure they don't fuck up other mods. to add support for this
+	;; mod you should test the SGO.ActorList.Persist list. other mods
+	;; are below.
+
+	String[] FourthPartyList = new String[2]
+	FourthPartyList[0] = "Untamed.TrackingList"  ;; Untamed
+	FourthPartyList[1] = "DM2.ActorList.Persist" ;; Display Model 2
+
+	Int CurrentMod = 0
+	While(CurrentMod < FourthPartyList.Length)
+		If(StorageUtil.FormListFind(None,FourthPartyList[CurrentMod],Who) != -1)
+			;; if found in any of the fourth party lists then do not
+			;; unregister it.
+			self.PrintDebug(Who.GetDisplayName() + " persist kept for " + FourthPartyList[CurrentMod])
+			Return
+		EndIf
+
+		CurrentMod += 1
+	EndWhile
 
 	Who.UnregisterForUpdate()
-	StorageUtil.FormListRemove(None,"SGO.ActorList.Persist",Who,TRUE)
 	self.PrintDebug(Who.GetDisplayName() + " persist cleared.")
 
 	Return
@@ -2014,6 +2045,7 @@ remove the gem if it is that.}
 EndFunction
 
 Float Function ActorGemRemoveFloat(Actor Who)
+{removes the first gem returning the float value rather than the form.}
 
 	If(self.ActorGemGetCount(Who) == 0)
 		Return -1
