@@ -27,7 +27,7 @@ Int Function GetVersion() Global
 {report a version number. this is new to sgo3. the first public release will
 report 300, following the same system i have for the versioning in the past.}
 
-	Return -300
+	Return 300
 EndFunction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -218,6 +218,9 @@ Faction Property dcc_sgo_FactionDisableScaleTesticle Auto
 
 FormList Property dcc_sgo_ListMilkItems Auto
 {form list of milks. this list needs to line up with the two race lists.}
+
+FormList Property dcc_sgo_ListMilkPot Auto
+{form list of milk potions. this list needs to line up with the race lists.}
 
 FormList Property dcc_sgo_ListSemenItems  Auto
 {form list of semens. it needs to line up with the race lists.}
@@ -1628,6 +1631,11 @@ shoudl not be animated, returns false if it is safe to animate.}
 	;; support for old Display Model.
 	If(StorageUtil.GetIntValue(Who,"IsBoundStrict") == 1)
 		Return TRUE
+
+	;; support for new Display Model 2.
+	ElseIf(StorageUtil.GetIntValue(Who,"DM2.Actor.Lockdown") == 1)
+		Return TRUE
+
 	EndIf
 
 	Return FALSE
@@ -1766,6 +1774,11 @@ EndFunction
 
 Function PersistHackApply(Actor Who)
 {apply persistance hacks to keep temprorary actors alive.}
+
+	If(StorageUtil.FormListFind(None,"SGO.ActorList.Persist",Who) != -1)
+		;; don't re-register if we are already in here.
+		Return
+	EndIf
 
 	Who.RegisterForUpdate(600)
 	StorageUtil.FormListAdd(None,"SGO.ActorList.Persist",Who,FALSE)
