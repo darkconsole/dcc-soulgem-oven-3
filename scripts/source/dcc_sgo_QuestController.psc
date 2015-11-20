@@ -791,6 +791,90 @@ Function BoneSetScale(Actor Who, String Bone, String ModKey, Float Value)
 	Return
 EndFunction
 
+;; overlay manipulation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+String Function ActorOverlayGetSlot(Actor Who, String OverlayName, Bool OursOnly=FALSE)
+{find the next available overlay slot, or the slot we were already using.}
+
+	String NodeName
+
+	;; prefix the overlay name.
+
+	OverlayName = "SGO.Actor.Overlay." + OverlayName
+
+	;; see if we already selected a node.
+
+	NodeName = StorageUtil.GetStringValue(Who,OverlayName)
+	If(NodeName != "" || OursOnly)
+		Return NodeName
+	EndIf
+
+	;; alright lets find an empty slot and gank it.
+
+	Int NodeCount = NiOverride.GetNumBodyOverlays()
+	Int NodeIter = 0
+	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+	String NodeTexture
+
+	While(NodeIter < NodeCount)
+		NodeName = "Body [Ovl" + NodeIter + "]"
+		NodeTexture = NiOverride.GetNodeOverrideString(Who,NodeSex,NodeName,9,0)
+
+		If(NodeTexture == "" || NodeTexture == "textures\\Actors\\character\\overlays\\default.dds")
+			;; mine now.
+			StorageUtil.SetStringValue(Who,OverlayName,NodeName)
+			Return NodeName
+		EndIf
+
+		NodeIter += 1
+	EndWhile
+
+	Return ""
+EndFunction
+
+Function ActorOverlayApply(Actor Who, String OverlayName, String Texture, Int Colour, Float Opacity)
+{apply an overlay to an actor.}
+
+	String NodeName = self.ActorOverlayGetSlot(Who,OverlayName,FALSE)
+	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+
+	If(NodeName == "")
+		;; we were unable to find a slot, or slots were disabled.
+		Return
+	EndIf
+
+	;; setting the texture.
+	NiOverride.AddNodeOverrideString(Who,NodeSex,NodeName,9,0,Texture,TRUE)
+	NiOverride.AddNodeOverrideFloat(Who,NodeSex,NodeName,8,-1,Opacity,TRUE)
+	NiOverride.AddNodeOverrideInt(Who,NodeSex,NodeName,7,-1,Colour,TRUE)
+	;; NiOverride.AddNodeOverrideInt(Who,NodeSex,NodeName,0,-1,0,TRUE)
+	;; NiOverride.AddNodeOverrideFloat(Who,NodeSex,NodeName,0,-1,1.0,TRUE)
+
+
+	Return
+EndFunction
+
+Function ActorOverlayClear(Actor Who, String OverlayName)
+{remove our overlay and free the slot up.}
+
+	String NodeName = self.ActorOverlayGetSlot(Who,OverlayName,TRUE)
+	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+
+	If(NodeName == "")
+		;; we were unable to find a slot we set.
+		Return
+	EndIF
+
+	;;NiOverride.RemoveNodeOverride(Who,NodeSex,NodeName,9,0)
+	;;NiOverride.RemoveNodeOverride(Who,NodeSex,NodeName,8,-1)
+	;;NiOverride.RemoveNodeOverride(Who,NodeSex,NodeName,7,-1)
+	NiOverride.RemoveAllNodeNameOverrides(Who,NodeSex,NodeName)
+	NiOverride.AddNodeOverrideString(Who,NodeSex,NodeName,9,0,"textures\\Actors\\character\\overlays\\default.dds",TRUE)
+	StorageUtil.UnsetStringValue(Who,("SGO.Actor.Overlay." + OverlayName))
+
+	Return
+EndFunction
+
 ;/*****************************************************************************
      __                            __                        
  .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
@@ -1633,7 +1717,7 @@ shoudl not be animated, returns false if it is safe to animate.}
 		Return TRUE
 
 	;; support for new Display Model 2.
-	ElseIf(StorageUtil.GetIntValue(Who,"DM2.Actor.Lockdown") == 1)
+	ElseIf(StorageUtil.GetIntValue(Who,"DisplayModel.Actor.Lockdown") == 1)
 		Return TRUE
 
 	EndIf
@@ -1808,7 +1892,7 @@ we don't fuck up those mods.}
 
 	String[] FourthPartyList = new String[2]
 	FourthPartyList[0] = "Untamed.TrackingList"  ;; Untamed
-	FourthPartyList[1] = "DM2.ActorList.Persist" ;; Display Model 2
+	FourthPartyList[1] = "DisplayModel.ActorList.Persist" ;; Display Model 2
 
 	Int CurrentMod = 0
 	While(CurrentMod < FourthPartyList.Length)
@@ -2471,9 +2555,15 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;; 1 / 8 = 0.125/hr * 24 = 3 = three per day = right
 
 	Milk += (Time / self.ActorMilkGetTime(Who))
-	If(Milk > Capacity)
+	If(Milk >= Capacity)
 		self.Immersive_OnMilkFull(Who)
 		Milk = Capacity
+	EndIf
+
+	If(Milk / Capacity >= 0.5)
+		self.ActorOverlayApply(Who,"MilkLeak","textures\\dcc-soulgem-oven\\milk-leak.dds",1,0.35)
+	Else
+		self.ActorOverlayClear(Who,"MilkLeak")
 	EndIf
 
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Milk.Data",Milk)
