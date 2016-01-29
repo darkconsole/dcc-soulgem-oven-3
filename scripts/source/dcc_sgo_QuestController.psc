@@ -749,7 +749,7 @@ Bool Function BoneHasScale(Actor Who, String Bone, String ModKey)
 		Bone = "NPC GenitalsScrotum [GenScrot]"
 	EndIf
 
-	Return NiOverride.HasNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+	Return NiOverride.HasNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetLeveledActorBase().GetSex() == 1),Bone,ModKey)
 EndFunction
 
 Float Function BoneGetScale(Actor Who, String Bone, String ModKey)
@@ -759,7 +759,7 @@ Float Function BoneGetScale(Actor Who, String Bone, String ModKey)
 		Bone = "NPC GenitalsScrotum [GenScrot]"
 	EndIf
 
-	Float Value = NiOverride.GetNodeTransformScale((Who as ObjectReference),False,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+	Float Value = NiOverride.GetNodeTransformScale((Who as ObjectReference),False,(Who.GetLeveledActorBase().GetSex() == 1),Bone,ModKey)
 
 	If(Value != 0.0)
 		Return Value
@@ -778,12 +778,12 @@ Function BoneSetScale(Actor Who, String Bone, String ModKey, Float Value)
 	EndIf
 
 	If(Value != 1.0)
-		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey,self.BoneCurveValue(Who,Bone,Value))
+		NiOverride.AddNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetLeveledActorBase().GetSex() == 1),Bone,ModKey,self.BoneCurveValue(Who,Bone,Value))
 	Else
-		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone,ModKey)
+		NiOverride.RemoveNodeTransformScale((Who as ObjectReference),FALSE,(Who.GetLeveledActorBase().GetSex() == 1),Bone,ModKey)
 	EndIf
 
-	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,(Who.GetActorBase().GetSex() == 1),Bone)
+	NiOverride.UpdateNodeTransform((Who as ObjectReference),FALSE,(Who.GetLeveledActorBase().GetSex() == 1),Bone)
 
 	;;self.PrintDebug(Bone + " NiO: " + self.BoneGetScale(Who,Bone,ModKey))
 	;;self.PrintDebug(Bone + " NetImm: " + NetImmerse.GetNodeScale((Who as ObjectReference),"NPC Belly",FALSE))
@@ -813,7 +813,7 @@ String Function ActorOverlayGetSlot(Actor Who, String OverlayName, Bool OursOnly
 
 	Int NodeCount = NiOverride.GetNumBodyOverlays()
 	Int NodeIter = 0
-	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+	Bool NodeSex = (Who.GetLeveledActorBase().GetSex() == 1)
 	String NodeTexture
 
 	While(NodeIter < NodeCount)
@@ -836,7 +836,7 @@ Function ActorOverlayApply(Actor Who, String OverlayName, String Texture, Int Co
 {apply an overlay to an actor.}
 
 	String NodeName = self.ActorOverlayGetSlot(Who,OverlayName,FALSE)
-	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+	Bool NodeSex = (Who.GetLeveledActorBase().GetSex() == 1)
 
 	If(NodeName == "")
 		;; we were unable to find a slot, or slots were disabled.
@@ -858,7 +858,7 @@ Function ActorOverlayClear(Actor Who, String OverlayName)
 {remove our overlay and free the slot up.}
 
 	String NodeName = self.ActorOverlayGetSlot(Who,OverlayName,TRUE)
-	Bool NodeSex = (Who.GetActorBase().GetSex() == 1)
+	Bool NodeSex = (Who.GetLeveledActorBase().GetSex() == 1)
 
 	If(NodeName == "")
 		;; we were unable to find a slot we set.
@@ -1040,6 +1040,8 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 			self.PrintDebug("Preg Chance Fail for " + ActorList[x].GetDisplayName())
 		EndIf
 
+		;; decide what to do if the actor is able to produce gems.
+
 		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) == self.BioProduceGems)
 			If(Preg)				
 				self.ActorGemAdd(ActorList[x])
@@ -1052,6 +1054,12 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 				ActorList[x].RemoveSpell(self.dcc_sgo_SpellInflate)
 				ActorList[x].AddSpell(self.dcc_sgo_SpellInflate)
 			EndIf
+		EndIf
+
+		;; decide what to do if the actor is able to jizz upon all the things.
+
+		If(Math.LogicalAnd(ActorBio[x],self.BioInseminate) == self.BioInseminate)
+			self.ActorSemenRemove(ActorList[x])
 		EndIf
 
 		x += 1
@@ -1082,7 +1090,7 @@ Function EventSend_OnGemProgress(Actor Who, Int[] Progress)
 	Return
 EndFunction
 
-Function EventSend_OnMilkProgress(Actor Who, Int Progress)
+Function EventSend_OnMilkProgress(Actor Who, Int Progress, Int Overage)
 {emit an event stating the current amount of milk being carried.}
 
 	Int e = ModEvent.Create("SGO.OnMilkProgress")
@@ -1090,6 +1098,7 @@ Function EventSend_OnMilkProgress(Actor Who, Int Progress)
 	If(e)
 		ModEvent.PushForm(e,Who)
 		ModEvent.PushInt(e,Progress)
+		ModEvent.PushInt(e,Overage)
 		ModEvent.Send(e)
 	EndIf
 
@@ -1292,7 +1301,7 @@ actor methods this method only return the last item.}
 
     ;; and we will apply the theft hack to stop you from getting
     ;; in trouble for picking it up.
-    ThisGuy.SetActorOwner(self.Player.GetActorBase())
+    ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
 
     Iter += 1
   EndWhile
@@ -1316,7 +1325,7 @@ kick by havok.}
     ThisGuy.MoveToNode(Source,Where)
 
     ;; apply the theft hack.
-    ThisGuy.SetActorOwner(self.Player.GetActorBase())
+    ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
 
     ;; now we can enable it...
     ThisGuy.Enable()
@@ -2461,25 +2470,10 @@ the type of milk that we should spawn in the world.}
 		Return None
 	EndIf
 
-	Int Index
-
 	StorageUtil.AdjustFloatValue(Who,"SGO.Actor.Milk.Data",-1.0)
 	self.ActorBodyUpdate_BreastScale(Who)
 
-	;; give a milk for normal races.
-	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
-	If(Index != -1)
-		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
-	EndIf
-
-	;; give a milk for vampire races that match normal races.
-	Index = self.dcc_sgo_ListRaceVampire.Find(Who.GetRace())
-	If(Index != -1)
-		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
-	EndIf
-
-	;; give the generic milk that sucks.
-	Return self.dcc_sgo_ListMilkItems.GetAt(0)
+	return self.ActorMilkGetType(Who)
 EndFunction
 
 ;;;;;;;;
@@ -2502,6 +2496,27 @@ Float Function ActorMilkGetTime(Actor Who)
 {figure out how fast this actor is generating milk.}
 
 	Return (self.OptMilkProduceTime * (self.ActorModGetMultiplier(Who,"Milk.Rate")))
+EndFunction
+
+Form Function ActorMilkGetType(Actor Who)
+{figure out what racist milk to give.}
+
+	Int Index
+
+	;; give a milk for normal races.
+	Index = self.dcc_sgo_ListRaceNormal.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
+	EndIf
+
+	;; give a milk for vampire races that match normal races.
+	Index = self.dcc_sgo_ListRaceVampire.Find(Who.GetRace())
+	If(Index != -1)
+		Return self.dcc_sgo_ListMilkItems.GetAt(Index)
+	EndIf
+
+	;; give the generic milk that sucks.
+	Return self.dcc_sgo_ListMilkItems.GetAt(0)
 EndFunction
 
 Float Function ActorMilkGetPercent(Actor Who)
@@ -2548,15 +2563,17 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;;;;;;;;
 
 	Float Capacity = self.ActorMilkGetCapacity(Who)
+	Float Overage = 0.0
 	Float Milk = StorageUtil.GetFloatValue(Who,"SGO.Actor.Milk.Data",0.0)
 	Float Before = Milk
 
 	;; produce time 8hr (3/day), once an hour
 	;; 1 / 8 = 0.125/hr * 24 = 3 = three per day = right
+	;; calculate how much we are over as well for later use.
 
 	Milk += (Time / self.ActorMilkGetTime(Who))
 	If(Milk >= Capacity)
-		self.Immersive_OnMilkFull(Who)
+		Overage = Milk - Capacity
 		Milk = Capacity
 	EndIf
 
@@ -2573,9 +2590,21 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	;;;;;;;;
 	;;;;;;;;
 
-	If(Before as Int < Milk as Int)
-		self.Immersive_OnMilkProgress(Who)
-		self.EventSend_OnMilkProgress(Who,(Milk as Int))
+	;; if the last calculation was a bottle less than the current calculation
+	;; that means we slept/waited/fasttraveled a long time. if the last calc
+	;; is equal to this calc that means we never milked after being full.
+	;; if we wait while already full we can see there will be overage then
+	;; and we will now send that with the event so that the milker can give
+	;; you what you are due for wearing it across fast travels or whatever.
+
+	If(Before as Int < Milk as Int || Overage)
+		If(Before == Milk)
+			self.Immersive_OnMilkFull(Who)
+		Else
+			self.Immersive_OnMilkProgress(Who)
+		EndIf
+		
+		self.EventSend_OnMilkProgress(Who,(Milk as Int),(Overage as Int))
 	EndIf
 
 	Return
@@ -3104,7 +3133,7 @@ EndFunction
 Function Immersive_OnGemFull(Actor Who)
 {send messages about gem fullness.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[6]
 		Msg[0] = "It feels like all my gems are ready."
 		Msg[1] = "I can tell the gems I carry have hit their max potential."
@@ -3121,7 +3150,7 @@ EndFunction
 Function Immersive_OnGemProgress(Actor Who, Int[] Progress)
 {send messages about gem progression.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[3]
 		Msg[0] = "You feel another gem has progressed."
 		Msg[1] = "You feel a gem has reached the next stage of development."
@@ -3135,7 +3164,7 @@ EndFunction
 Function Immersive_OnMilkFull(Actor Who)
 {send messages about milk being full.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[9]
 		Msg[0] = "My breasts are sore and ready to burst."
 		Msg[1] = "If my breasts get any fuller they might pop!"
@@ -3154,7 +3183,7 @@ EndFunction
 Function Immersive_OnMilkProgress(Actor Who)
 {send messages about milk progression.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[3]
 		Msg[0] = "My breasts feel a little heavier."
 		Msg[1] = "My breasts have gotten heavier."
@@ -3168,7 +3197,7 @@ EndFunction
 Function Immersive_OnSemenFull(Actor Who)
 {send messages about milk being full.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[4]
 		Msg[0] = "My balls ache from being so full."
 		Msg[1] = "My balls are so full it hurts."
@@ -3183,7 +3212,7 @@ EndFunction
 Function Immersive_OnSemenProgress(Actor Who)
 {send messages about milk progression.}
 
-	If(Who == self.Player)
+	If(Who == self.Player && self.OptImmersivePlayer)
 		String[] Msg = new String[2]
 		Msg[0] = "My balls feel a little heavier"
 		Msg[1] = "I can tell my balls have refilled some."
