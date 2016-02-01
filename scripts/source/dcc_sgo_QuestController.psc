@@ -3038,25 +3038,24 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 		Return
 	EndIf
 
+	Float GemValue = self.GetGemValue(GemType) As Float
+	If(GemValue == 0.0)
+		;; if inserting a fragment then pick a random number
+		;; to start the value at to represent its mass.
+		GemValue = Utility.RandomFloat(0.1,0.6)
+	EndIf
+
 	If(self.ActorNoAnimate(Dest))
 		;; shorthand version if we cannot animate.
 		self.ImmersiveBlush(Dest)
 		self.ImmersiveSoundMoan(Dest,FALSE)
 		self.ImmersiveExpression(Dest,TRUE)
 		Source.RemoveItem(GemType,1)
-		self.ActorGemAdd(Dest,self.GetGemValue(GemType))
+		self.ActorGemAdd(Dest,GemValue)
 		Utility.Wait(1.5)
 		self.ImmersiveExpression(Dest,FALSE)
 	Else
 		;; full scene.
-
-		Float GemValue = self.GetGemValue(GemType) As Float
-		If(GemValue == 0.0)
-			;; if inserting a fragment then pick a random number
-			;; to start the value at to represent its mass.
-			GemValue = Utility.RandomFloat(0.1,0.6)
-		EndIf
-
 		self.BehaviourDefault(Dest)
 		self.ActorRemoveChestpiece(Dest)
 		self.ImmersiveAnimationInsertion(Dest)
