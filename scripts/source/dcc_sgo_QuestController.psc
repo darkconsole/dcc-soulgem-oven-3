@@ -1,21 +1,21 @@
 Scriptname dcc_sgo_QuestController extends Quest
 {The main API controlpoint for Soulgem Oven 3.}
-
+	
 ;/*****************************************************************************
-  _______             __                          _______                   
+	_______             __                          _______                   
  |   _   .-----.--.--|  .-----.-----.--------.   |   _   .--.--.-----.-----.
  |   1___|  _  |  |  |  |  _  |  -__|        |   |.  |   |  |  |  -__|     |
  |____   |_____|_____|__|___  |_____|__|__|__|   |.  |   |\___/|_____|__|__|
  |:  1   |              |_____|                  |:  1   |                  
  |::.. . |                                       |::.. . |                  
  `-------'                                       `-------'                  
-     __   __              _______ __    __         __                       
-    |  |_|  |--.-----.   |       |  |--|__.----.--|  |                      
-    |   _|     |  -__|   |.|   | |     |  |   _|  _  |                      
-    |____|__|__|_____|   `-|.  |-|__|__|__|__| |_____|                      
-                           |:  |                                            
-                           |::.|                                            
-                           `---'                                            
+	 __   __              _______ __    __         __                       
+	|  |_|  |--.-----.   |       |  |--|__.----.--|  |                      
+	|   _|     |  -__|   |.|   | |     |  |   _|  _  |                      
+	|____|__|__|_____|   `-|.  |-|__|__|__|__| |_____|                      
+	                       |:  |                                            
+	                       |::.|                                            
+	                       `---'                                            
 
 *****************************************************************************/;
 
@@ -27,7 +27,7 @@ Int Function GetVersion() Global
 {report a version number. this is new to sgo3. the first public release will
 report 300, following the same system i have for the versioning in the past.}
 
-	Return 300
+	Return 308
 EndFunction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -154,7 +154,7 @@ EndFunction
 ;;
 
 ;/*****************************************************************************
-                                    __   __             
+	                                __   __             
  .-----.----.-----.-----.-----.----|  |_|__.-----.-----.
  |  _  |   _|  _  |  _  |  -__|   _|   _|  |  -__|__ --|
  |   __|__| |_____|   __|_____|__| |____|__|_____|_____|
@@ -179,7 +179,7 @@ Static Property StaticXMarker Auto
 {the xmarker from the game,}
 
 ;/*****************************************************************************
-                    __      ___                           
+	                __      ___                           
  .--------.-----.--|  |   .'  _.-----.----.--------.-----.
  |        |  _  |  _  |   |   _|  _  |   _|        |__ --|
  |__|__|__|_____|_____|   |__| |_____|__| |__|__|__|_____|
@@ -246,6 +246,12 @@ Package Property dcc_sgo_PackageDoNothing Auto
 Spell Property dcc_sgo_SpellBellyEncumber Auto
 {spell that emcumbers you with belly size.}
 
+Spell Property dcc_sgo_SpellBellyBonus Auto
+{spell that gives you bonus health and mana with belly size.}
+
+Spell Property dcc_sgo_SpellBellyDamage Auto
+{spell that handles damage to growing gems.}
+
 Spell Property dcc_sgo_SpellBreastInfluence Auto
 {spell that increases barter ability with boob size.}
 
@@ -268,11 +274,11 @@ Armor Property dcc_sgo_ArmorSquirtingCum Auto
 {fx object for squirting.}
 
 ;/*****************************************************************************
-                    __                       ___ __       
+	                __                       ___ __       
  .--------.-----.--|  |   .----.-----.-----.'  _|__.-----.
  |        |  _  |  _  |   |  __|  _  |     |   _|  |  _  |
  |__|__|__|_____|_____|   |____|_____|__|__|__| |__|___  |
-                                                   |_____|
+	                                               |_____|
 
 *****************************************************************************/;
 
@@ -294,6 +300,12 @@ Float Property OptMilkProduceTime = 8.0 Auto Hidden
 
 Int Property OptMilkMaxCapacity = 3 Auto Hidden
 {how many bottles of milk can be carried at one time.}
+
+Float Property OptMilkLeakThresh = 0.8 Auto Hidden
+{at what capacity percentage the milk leak texture should start showing.}
+
+Bool Property OptMilkLeakClear = TRUE Auto Hidden
+{clear the milk leaking immediately after milking.}
 
 ;; semen options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -361,6 +373,12 @@ Bool Property OptEffectBreastInfluence = TRUE Auto Hidden
 Bool Property OptEffectBellyEncumber = TRUE Auto Hidden
 {if the belly encumberment buff/debuff should be applied.}
 
+Bool Property OptEffectBellyBonus = TRUE Auto Hidden
+{if the belly bonus buff should be applied.}
+
+Bool Property OptEffectBellyDamage = TRUE Auto Hidden
+{if taking damage should be detrimental to your gems.}
+
 Bool Property OptCumInflation = TRUE Auto Hidden
 {if to enable cum inflation or not.}
 
@@ -370,6 +388,18 @@ Bool Property OptCumInflationHold = TRUE Auto Hidden
 Int Property OptAnimationBirthing = -1 Auto Hidden
 {-1 = random animation every gem. 0 = random animation every birthing set. other
 values stand for the configured animations.}
+
+Int Property OptBellyDamageChance = 10 Auto Hidden
+{chance a gem will get damaged on hit}
+
+Int Property OptBellyDamageChancePower = 25 Auto Hidden
+{chance a gem will get damaged when it with a power attack}
+
+Float Property OptBellyDamageMax = 0.2 Auto Hidden
+{max value a gem can be hurt for}
+
+Float Property OptBellyDamageMaxPower = 0.4 Auto Hidden
+{max value a gem can be hurt for by a power attack}
 
 ;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -405,6 +435,12 @@ Bool Property OptUntamedPregChance = TRUE Auto Hidden
 {integrate with untamed so the untamed level increases pregchance with
 beasts.}
 
+Bool Property OptResetNodeOnDisable = TRUE Auto Hidden
+{reset the bones when they are disabled.}
+
+Bool Property OptResetDataOnDisable = TRUE Auto Hidden
+{drop all the preg/milk/semen data when that function is disabled.}
+
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Int Property BioProduceGems = 1  AutoReadOnly
@@ -414,7 +450,7 @@ Int Property BioIsBeast     = 8  AutoReadOnly
 Int Property BioInflate     = 16 AutoReadOnly
 
 ;/*****************************************************************************
-                     __                      __              __ 
+	                 __                      __              __ 
  .--------.-----.--|  |   .----.-----.-----|  |_.----.-----|  |
  |        |  _  |  _  |   |  __|  _  |     |   _|   _|  _  |  |
  |__|__|__|_____|_____|   |____|_____|__|__|____|__| |_____|__|
@@ -465,6 +501,8 @@ Function ResetMod_Values()
 	self.OptGemFilled = TRUE
 	self.OptMilkProduceTime = 8.0
 	self.OptMilkMaxCapacity = 3
+	self.OptMilkLeakThresh = 0.8
+	self.OptMilkLeakClear = TRUE
 	self.OptSemenProduceTime = 12.0
 	self.OptSemenMaxCapacity = 2
 	self.OptScaleBellyCurve = 1.75
@@ -499,7 +537,7 @@ Function ResetMod_Spells()
 {force refresh of the spells.}
 
 	self.Player.RemoveSpell(self.dcc_sgo_SpellMenuMain)
-  Utility.Wait(1.0)
+	Utility.Wait(1.0)
 	self.Player.AddSpell(self.dcc_sgo_SpellMenuMain,TRUE)
 
 	Return
@@ -554,26 +592,84 @@ Function ResetActor(Actor Who)
 {delete all the data in storage util for a specific actor to make it like sgo
 never even touched it.}
 
-     ;; ask ashal why there is no ClearAllPrefix that works with the object to
-     ;; provide scope before i go writing a 50 line long clear func.
+	;; ask ashal why there is no ClearAllPrefix that works with the object to
+	;; provide scope before i go writing a 50 line long clear func.
 
-     Return
+	Return
 EndFunction
 
 ;/*****************************************************************************
-        __   __ __ __ __              ___                  
+	    __   __ __ __ __              ___                  
  .--.--|  |_|__|  |__|  |_.--.--.   .'  _.--.--.-----.----.
  |  |  |   _|  |  |  |   _|  |  |   |   _|  |  |     |  __|
  |_____|____|__|__|__|____|___  |   |__| |_____|__|__|____|
-                          |_____|                          
-                                                           
+	                      |_____|                          
+	                                                       
 *****************************************************************************/;
+
+Function FormListLock(Form Scope, String Name, String CalledBy="Unknown")
+{create a spinlock for a formlist.}
+
+	Int Count = 0
+
+	While(StorageUtil.GetStringValue(Scope,(Name+"--FormListLock")) != "")
+		Count += 1
+		self.PrintDebug(CalledBy + "(" + Count + ") spinning from " + StorageUtil.GetStringValue(Scope,(Name+"--FormListLock")))
+		Utility.Wait(0.25)
+	EndWhile
+
+	StorageUtil.SetStringValue(Scope,(Name+"--FormListLock"),CalledBy)
+	;;self.PrintDebug("Locking " + Name)
+EndFunction
+
+Function FormListUnlock(Form Scope, String Name)
+{release a spinlock for a formlist.}
+
+	StorageUtil.UnsetStringValue(Scope,(Name+"--FormListLock"))
+	;;self.PrintDebug("Unlocking " + Name)
+EndFunction
+
+Function FormListFlushLost(Form Scope, String Name)
+{forcably remove anything from the specified form list if it retrieves from
+storage as None.}
+
+	self.FormListLock(Scope,Name,"FormListFlushLost")
+
+	Int Count = 0
+	Int Len = StorageUtil.FormListCount(Scope,Name)
+	Int Iter = 0
+	Form What 
+
+	While(Iter < Len)
+		What = StorageUtil.FormListGet(Scope,Name,Iter)
+
+		If(What == None)
+			StorageUtil.FormListRemoveAt(Scope,Name,Iter)
+			Len -= 1
+			Count += 1
+		Else
+			Iter += 1
+		EndIf
+	EndWhile
+
+	If(Count > 0)
+		self.PrintDebug("flushed " + Count + " killed/lost/trashed refs from " + Name)
+		self.PrintLog("flushed " + Count + " killed/lost/trashed refs from " + Name)
+	EndIf
+
+	self.FormListUnlock(Scope,Name)
+
+	Return
+EndFunction
 
 String Function ChooseRandomString(String[] What)
 {given an array choose a random string from it. we will use this for things
 like printing random messages or choosing random animations.}
+
+	Int Offset = Utility.RandomInt(0,(What.Length - 1))
+	self.PrintLog("Choosing Random String " + Offset + " of " + (What.Length - 1))
 	
-	Return What[Utility.RandomInt(0,(What.Length - 1))]
+	Return What[Offset]
 EndFunction
 
 Function Print(String Msg)
@@ -597,7 +693,17 @@ EndFunction
 Function PrintRandom(String[] MsgList)
 {print a random one of the strings from a given array.}
 
-	self.Print(self.ChooseRandomString(MsgList))
+	String Msg = self.ChooseRandomString(MsgList)
+	self.PrintLog("Printing Random String: " + Msg)
+
+	self.Print(Msg)
+	Return
+EndFunction
+
+Function PrintLog(String Msg)
+{print to log file}
+
+	Debug.Trace("[SGO] " + Msg);
 	Return
 EndFunction
 
@@ -773,8 +879,19 @@ EndFunction
 Function BoneSetScale(Actor Who, String Bone, String ModKey, Float Value)
 {wrap nioverride, set a bone scale.}
 
+	If(Bone == "NPC Breasts")
+		self.BoneSetScale(Who,"NPC L Breast",ModKey,Value)
+		self.BoneSetScale(Who,"NPC R Breast",ModKey,Value)
+		Return
+	EndIf
+
 	If(Bone == "NPC Testicles")
 		Bone = "NPC GenitalsScrotum [GenScrot]"
+	EndIf
+
+	If(!NetImmerse.HasNode((Who as ObjectReference),Bone,FALSE))
+		;; do not try if the node does not exist.
+		Return
 	EndIf
 
 	If(Value != 1.0)
@@ -844,11 +961,12 @@ Function ActorOverlayApply(Actor Who, String OverlayName, String Texture, Int Co
 	EndIf
 
 	;; setting the texture.
-	NiOverride.AddNodeOverrideString(Who,NodeSex,NodeName,9,0,Texture,TRUE)
-	NiOverride.AddNodeOverrideFloat(Who,NodeSex,NodeName,8,-1,Opacity,TRUE)
-	NiOverride.AddNodeOverrideInt(Who,NodeSex,NodeName,7,-1,Colour,TRUE)
+	NiOverride.AddNodeOverrideString(Who,NodeSex,NodeName,9, 0,Texture,TRUE)
+	NiOverride.AddNodeOverrideFloat( Who,NodeSex,NodeName,8,-1,Opacity,TRUE)
+	NiOverride.AddNodeOverrideInt(   Who,NodeSex,NodeName,7,-1,Colour, TRUE)
 	;; NiOverride.AddNodeOverrideInt(Who,NodeSex,NodeName,0,-1,0,TRUE)
 	;; NiOverride.AddNodeOverrideFloat(Who,NodeSex,NodeName,0,-1,1.0,TRUE)
+	NiOverride.ApplyNodeOverrides(Who)
 
 
 	Return
@@ -871,17 +989,18 @@ Function ActorOverlayClear(Actor Who, String OverlayName)
 	NiOverride.RemoveAllNodeNameOverrides(Who,NodeSex,NodeName)
 	NiOverride.AddNodeOverrideString(Who,NodeSex,NodeName,9,0,"textures\\Actors\\character\\overlays\\default.dds",TRUE)
 	StorageUtil.UnsetStringValue(Who,("SGO.Actor.Overlay." + OverlayName))
+	NiOverride.ApplyNodeOverrides(Who)
 
 	Return
 EndFunction
 
 ;/*****************************************************************************
-     __                            __                        
+	 __                            __                        
  .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
  |  _  |  -__|  _  |  -__|     |  _  |  -__|     |  __|  |  |
  |_____|_____|   __|_____|__|__|_____|_____|__|__|____|___  |
-             |__|                                     |_____|
-                                                             
+	         |__|                                     |_____|
+	                                                         
 *****************************************************************************/;
 
 Bool Function IsInstalledNiOverride(Bool Popup=TRUE)
@@ -941,11 +1060,11 @@ the use of AdjustFloatValue and the like.}
 EndFunction
 
 ;/*****************************************************************************
-                          __         
+	                      __         
  .-----.--.--.-----.-----|  |_.-----.
  |  -__|  |  |  -__|     |   _|__ --|
  |_____|\___/|_____|__|__|____|_____|
-                                                             
+	                                                         
 *****************************************************************************/;
 
 Event OnInit()
@@ -1257,27 +1376,35 @@ Function EventSend_OnInseminated(Actor Who, Form What)
 EndFunction
 
 ;/*****************************************************************************
-             __                     __       __         
+	         __                     __       __         
  .---.-.----|  |_.-----.----.   .--|  .---.-|  |_.---.-.
  |  _  |  __|   _|  _  |   _|   |  _  |  _  |   _|  _  |
  |___._|____|____|_____|__|     |_____|___._|____|___._|
-                                                        
+	                                                    
 *****************************************************************************/;
 
-ObjectReference Function ActorDropObject(Actor Who, Form What, Int Count=1, Bool Kick=TRUE)
+ObjectReference Function ActorDropObject(Actor Who, Form What, Int Count=1, Bool Kick=TRUE, String Bone="")
 {place an object in the 3d world by the specified actor. this method will
 perform a few checks to determine the most immersive type of drop we should
 do for the current scenerio.}
 
-  ObjectReference ThisGuy
+	ObjectReference ThisGuy
 
-  If(self.ActorNoAnimate(Who) || !Kick)
-    ThisGuy = self.ActorDropObject_Gentle(Who,What,Count)
-  Else
-    ThisGuy = self.ActorDropObject_Positioned(Who,What,"NPC Pelvis [Pelv]",Count,Kick)
-  EndIf
+	If(self.ActorNoAnimate(Who) || !Kick)
+		ThisGuy = self.ActorDropObject_Gentle(Who,What,Count)
+	Else
+		;;NPC Pelvis [Pelv]
+		;;NPC GenitalsBase [GenBase]
+		;;SchlongMagic
+		;;NPC GenitalsScrotum [GenScrot]
+		If(Bone == "")
+			Bone = "NPC GenitalsScrotum [GenScrot]"
+		EndIf
 
-  Return ThisGuy
+		ThisGuy = self.ActorDropObject_Positioned(Who,What,Bone,Count,Kick)
+	EndIf
+
+	Return ThisGuy
 EndFunction
 
 ObjectReference Function ActorDropObject_Gentle(Actor Source, Form What, Int Count=1)
@@ -1285,72 +1412,117 @@ ObjectReference Function ActorDropObject_Gentle(Actor Source, Form What, Int Cou
 push the actor or various other things around the room. just like the normal
 actor methods this method only return the last item.}
 
-  ;; however we perform the count in a loop so that we can update
-  ;; options for all the objects dropped.
+	;; however we perform the count in a loop so that we can update
+	;; options for all the objects dropped.
 
-  Int Iter = 0
-  ObjectReference ThisGuy
+	Int Iter = 0
+	ObjectReference ThisGuy
 
-  While(Iter < Count)
-    ;; this process involves giving the actor one of the things.
-    Source.AddItem(What,1)
+	While(Iter < Count)
+	;; this process involves giving the actor one of the things.
+	Source.AddItem(What,1)
 
-    ;; then using the drop function on the actor which places it
-    ;; gently at their feet.
-    ThisGuy = Source.DropObject(What,1)
+	;; then using the drop function on the actor which places it
+	;; gently at their feet.
+	ThisGuy = Source.DropObject(What,1)
 
-    ;; and we will apply the theft hack to stop you from getting
-    ;; in trouble for picking it up.
-    ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
+	;; and we will apply the theft hack to stop you from getting
+	;; in trouble for picking it up.
+	ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
 
-    Iter += 1
-  EndWhile
+	Iter += 1
+	EndWhile
 
-  Return ThisGuy
+	Return ThisGuy
 EndFunction
 
 ObjectReference Function ActorDropObject_Positioned(Actor Source, Form What, String Where, Int Count=1, Bool Kick=TRUE)
 {place an object at a specified bone location of an actor with an optional
 kick by havok.}
 
-  Int Iter = 0
-  ObjectReference ThisGuy
+	;; so this function now implements a hilarious hack to get around
+	;; having to properly trig the direction to kick the gem. this is
+	;; because it appears while GetNodeWorldPosition works properly,
+	;; GetWorldNodeRotation returns the same as GetLocalNodeRotation
+	;; one hundred percent of the time making its values useless.
 
-  While(Iter < Count)
+	;; we cannot just use GetAngle on the actor because the angle
+	;; will not reflect what the animation has done to it. this way
+	;; we attempt to shoot the gem in the proper direction no matter
+	;; which way the animation changed the actor.
 
-    ;; start by placing a disabled object at the actor.
-    ThisGuy = Source.PlaceAtMe(What,1,FALSE,TRUE)
+	Int Iter = 0
+	ObjectReference ThisGuy
 
-    ;; move it to the specified location.
-    ThisGuy.MoveToNode(Source,Where)
+	Float Speed ;; calculated speed of how hard to kick it.
+	Float VecDiv ;; a lol divisor for the vector. explained below.
+	Float[] Pot = new Float[3] ;; the position of the node we want the gem to appear
+	Float[] Ref = new Float[3] ;; the reference vector pointing from the neck to the pelvis
+	Float[] Vec = New Float[3] ;; the chilled calculated vector to give to havok
 
-    ;; apply the theft hack.
-    ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
+	;;;;;;;;
+	;;;;;;;;
 
-    ;; now we can enable it...
-    ThisGuy.Enable()
+	NetImmerse.GetNodeWorldPosition(Source,Where,Pot,FALSE)
+	NetImmerse.GetRelativeNodePosition(Source,"NPC Neck [Neck]","NPC Pelvis [Pelv]",Ref,FALSE)
 
-    ;; and kick it.
-    If(Kick)
-      Utility.Wait(0.05)
+	;; this 45 is just slightly more than the vertical distance between neck and pelvis.
+	;; it is multipled by the scale to create a divisor for the realtive position.
+	;; GetScale() detects console done scaling. NodeScale detects racemenu done scaling.
+	VecDiv = Source.GetScale() * NetImmerse.GetNodeScale(Source,"NPC",FALSE) * 45
 
-      ;; this is currently kicking it straight into the air.
-      ;; todo: fancy math this more fancy than the code i stole two years
-      ;; ago probably by checking node data via nio.
-      ThisGuy.ApplyHavokImpulse(0.0,0.0,1.0,20)
-    EndIf
+	;;;;;;;;
+	;;;;;;;;
 
-    Iter += 1
-  EndWhile
+	Vec[0] = (Ref[0] / VecDiv)
+	Vec[1] = (Ref[1] / VecDiv)
+	Vec[2] = (Ref[2] / VecDiv)
 
-  return ThisGuy
+	;; kick it harder the higher up we're trying to point it, but avoid
+	;; punting it too hard straight into the ground so it doesn't fly
+	;; crazy anywhere.
+	If(Vec[2] > -0.6)
+		Speed = (3 * (1 + (Ref[2] / VecDiv)))
+	Else
+		Speed = 0.01
+	EndIf
+
+	self.PrintDebug(Where + " Vec(" + Vec[0] + "," + Vec[1] + "," + Vec[2] + ") Speed(" + Speed + ")")
+
+	;;;;;;;;
+	;;;;;;;;
+
+	If(Where == "SkirtFBone02C" || Where == "SkirtBBone02C")
+		;; adjust the position for these bones a bit more to try and get out of
+		;; the actor's collision area by applying the neck->pelvis vector.
+		Pot[0] = Pot[0] + (Vec[0] * 10)
+		Pot[1] = Pot[1] + (Vec[1] * 10)
+		Pot[2] = Pot[2] + (Vec[2] * 4)
+	EndIf
+
+	;;;;;;;;
+	;;;;;;;;
+
+	While(Iter < Count)
+		ThisGuy = Source.PlaceAtMe(What,1,FALSE,TRUE)
+		ThisGuy.SetPosition(Pot[0],Pot[1],Pot[2])
+		ThisGuy.SetActorOwner(self.Player.GetLeveledActorBase())
+		ThisGuy.Enable(FALSE)
+
+		If(Kick)
+		 	Utility.Wait(0.10)
+			ThisGuy.ApplyHavokImpulse(Vec[0],Vec[1],Vec[2],Speed)
+		EndIf
+
+		Iter += 1
+	EndWhile
+
+	return ThisGuy
 EndFunction
 
 Int Function ActorGetBiologicalFunctions(Actor Who, Bool Cached=TRUE)
 {determine what this actor's body is able to accomplish. returns a bitwised
 integer that defines the capaiblities of this actor.}
-
-  
 
 	Int Value = 0
 
@@ -1419,8 +1591,17 @@ you must do each function individually.}
 		Who.RemoveFromFaction(ToEnable)
 		Who.AddToFaction(ToDisable)
 
-		If(Func == self.BioInseminate)
-			self.ActorTrackForSemen(Who,FALSE)
+		If(self.OptResetDataOnDisable)
+			If(Func == self.BioInseminate)
+				self.ActorTrackForSemen(Who,FALSE)
+				self.ActorSemenClearData(Who)
+			ElseIf(Func == self.BioProduceMilk)
+				self.ActorMilkClearData(Who)
+			ElseIf(Func == self.BioProduceGems)
+				self.ActorGemClearData(Who)
+			EndIf
+
+			self.ActorBodyUpdate(Who)
 		EndIf
 	EndIf
 
@@ -1463,8 +1644,19 @@ Function ActorToggleFaction(Actor Who, Faction What)
 
 	If(Who.IsInFaction(What))
 		Who.RemoveFromFaction(What)
+		self.ActorBodyUpdate(Who)
 	Else
 		Who.AddToFaction(What)
+
+		If(self.OptResetNodeOnDisable)
+			If(What == self.dcc_sgo_FactionDisableScaleTesticle)
+				self.BoneSetScale(who,"NPC Testicles","SGO.Scale",1.0)
+			ElseIf(What == self.dcc_sgo_FactionDisableScaleBelly)
+				self.BoneSetScale(who,"NPC Belly","SGO.Scale",1.0)
+			ElseIf(What == self.dcc_sgo_FactionDisableScaleBreast)
+				self.BoneSetScale(who,"NPC Breasts","SGO.Scale",1.0)
+			EndIf
+		EndIf
 	EndIf
 
 	Return
@@ -1668,18 +1860,31 @@ Function ActorApplyBreastInfluence(Actor Who)
 {this function will re-calculate the breast influence for barter and refresh it
 when needed.}
 
-	Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
-
-	If(!self.OptEffectBreastInfluence || self.ActorMilkGetWeight(Who) == 0)
-		;; allow the above to clean up but not progress if disabled.
+	If(Who != self.Player)
+		;; no point since mgefs fall off them anyway.
 		Return
 	EndIf
 
-	Float Multi = self.ActorModGetMultiplier(Who,"Breast.Influence")
+	;;;;;;;;
+	;;;;;;;;
 
-	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,((self.ActorMilkGetPercent(Who) / 4) * Multi))
-	self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(1,((self.ActorMilkGetPercent(Who) / 8) * (Multi / 2)))
-	Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
+	If(Who.HasSpell(self.dcc_sgo_SpellBreastInfluence))
+		Who.RemoveSpell(self.dcc_sgo_SpellBreastInfluence)
+	EndIf
+
+	;;;;;;;;
+	;;;;;;;;
+
+	If(self.OptEffectBreastInfluence && self.ActorMilkGetWeight(Who) > 0)
+		;; effect 0 is the normal breast influence. effect 1 is a hidden bonus
+		;; influence that i never told anyone about that only applies if you
+		;; are naked.
+		Float InfluenceMulti = self.ActorModGetMultiplier(Who,"Breast.Influence")
+		self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(0,((self.ActorMilkGetPercent(Who) / 4) * InfluenceMulti))
+		self.dcc_sgo_SpellBreastInfluence.SetNthEffectMagnitude(1,((self.ActorMilkGetPercent(Who) / 8) * (InfluenceMulti / 2)))
+		Who.AddSpell(self.dcc_sgo_SpellBreastInfluence,FALSE)
+	EndIf
+
 	Return
 EndFunction
 
@@ -1694,21 +1899,55 @@ needed.}
 	;; fool the game into updating the speed, so i restructured this a little
 	;; to avoid having to do it four times.
 
-	If(!self.OptEffectBellyEncumber || self.ActorGemGetCount(Who) == 0)
-		;; remove the effect if they disabled it or we aren't even pregnant
-		;; anymore. then we are done here.
-		Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
-		Who.ModActorValue("CarryWeight",1.0)
-		Who.ModActorValue("CarryWeight",-1.0)
+	If(Who != self.Player)
+		;; no point since mgefs fall off them anyway.
 		Return
 	EndIf
 
-	;; else we need to update and apply it.
-	Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
-	self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,(((self.ActorGemGetPercent(Who) / 4) * -1)) * self.ActorModGetMultiplier(Who,"Belly.Encumber"))
-	Who.AddSpell(self.dcc_sgo_SpellBellyEncumber,FALSE)
-	Who.ModActorValue("CarryWeight",1.0)
-	Who.ModActorValue("CarryWeight",-1.0)
+	;;;;;;;;
+	;;;;;;;;
+
+	If(Who.HasSpell(self.dcc_sgo_SpellBellyEncumber))
+		Who.RemoveSpell(self.dcc_sgo_SpellBellyEncumber)
+		Who.ModActorValue("CarryWeight",1.0)
+		Who.ModActorValue("CarryWeight",-1.0)
+	EndIf
+
+	If(Who.HasSpell(self.dcc_sgo_SpellBellyBonus))
+		Who.RemoveSpell(self.dcc_sgo_SpellBellyBonus)
+	EndIf
+
+	If(Who.HasSpell(self.dcc_sgo_SpellBellyDamage))
+		Who.RemoveSpell(self.dcc_sgo_SpellBellyDamage)
+	EndIf
+
+	;;;;;;;;
+	;;;;;;;;
+
+	Float GemCount = self.ActorGemGetCount(Who)
+	Float GemPercent = self.ActorGemGetPercent(Who)
+
+	If(self.OptEffectBellyEncumber && GemCount > 0)
+		;; slow them down the fuller they get.
+		;; 0 to -25 before modifiers.
+		self.dcc_sgo_SpellBellyEncumber.SetNthEffectMagnitude(0,((GemPercent / 4) * -1) * self.ActorModGetMultiplier(Who,"Belly.Encumber"))
+		Who.AddSpell(self.dcc_sgo_SpellBellyEncumber,FALSE)
+		Who.ModActorValue("CarryWeight",1.0)
+		Who.ModActorValue("CarryWeight",-1.0)
+	EndIf
+
+	If(self.OptEffectBellyBonus && GemCount > 0)
+		;; give more health and mana due to having power within your belly.
+		;; effect 0 is health and effect 1 is mana.
+		;; at 100% full the range is 5 to 250, your level making it scale.
+		self.dcc_sgo_SpellBellyBonus.SetNthEffectMagnitude(0, ((GemPercent / 20) * (Who.GetLevel() / 2)) * self.ActorModGetMultiplier(Who,"Belly.Bonus.Health"))
+		self.dcc_sgo_SpellBellyBonus.SetNthEffectMagnitude(1, ((GemPercent / 20) * (Who.GetLevel() / 2)) * self.ActorModGetMultiplier(Who,"Belly.Bonus.Mana") )
+		Who.AddSpell(self.dcc_sgo_SpellBellyBonus,FALSE)
+	EndIf
+
+	If(self.OptEffectBellyDamage && GemCount > 0)
+		Who.AddSpell(self.dcc_sgo_SpellBellyDamage,FALSE)
+	EndIf
 
 	Return
 EndFunction
@@ -1726,7 +1965,7 @@ shoudl not be animated, returns false if it is safe to animate.}
 		Return TRUE
 
 	;; support for new Display Model 2.
-	ElseIf(StorageUtil.GetIntValue(Who,"DisplayModel.Actor.Lockdown") == 1)
+	ElseIf(StorageUtil.GetIntValue(Who,"DM2.Actor.Restrain") == 1)
 		Return TRUE
 
 	EndIf
@@ -1741,7 +1980,7 @@ Bool Function ActorCanAnimate(Actor Who)
 EndFunction
 
 ;/*****************************************************************************
-             __                              __                       __       
+	         __                              __                       __       
  .---.-.----|  |_.-----.----.   .--.--.---.-|  |   .--------.-----.--|  .-----.
  |  _  |  __|   _|  _  |   _|   |  |  |  _  |  |   |        |  _  |  _  |__ --|
  |___._|____|____|_____|__|      \___/|___._|__|   |__|__|__|_____|_____|_____|
@@ -1808,7 +2047,7 @@ Function ActorModUnsetValue(Actor Who, String What, String ModKey)
 EndFunction
 
 ;/*****************************************************************************
-             __                                   __              __ 
+	         __                                   __              __ 
  .---.-.----|  |_.-----.----.   .----.-----.-----|  |_.----.-----|  |
  |  _  |  __|   _|  _  |   _|   |  __|  _  |     |   _|   _|  _  |  |
  |___._|____|____|_____|__|     |____|_____|__|__|____|__| |_____|__|
@@ -1851,7 +2090,7 @@ Function BehaviourClear(Actor Who, Bool Full=False)
 EndFunction
 
 Function BehaviourDefault(Actor Who)
-{enforece the default ai behaviour of do nothing.}
+{enforce the default ai behaviour of do nothing.}
 
 	self.BehaviourClear(Who,TRUE)
 
@@ -1866,26 +2105,31 @@ Function BehaviourDefault(Actor Who)
 EndFunction
 
 Function PersistHackApply(Actor Who)
-{apply persistance hacks to keep temprorary actors alive.}
+{apply persistence hacks to keep temporary actors alive.}
 
 	If(StorageUtil.FormListFind(None,"SGO.ActorList.Persist",Who) != -1)
 		;; don't re-register if we are already in here.
 		Return
 	EndIf
 
-	Who.RegisterForUpdate(600)
-	StorageUtil.FormListAdd(None,"SGO.ActorList.Persist",Who,FALSE)
 	self.PrintDebug(Who.GetDisplayName() + " shall persist.")
+	Who.RegisterForUpdate(600)
+
+	self.FormListLock(None,"SGO.ActorList.Persist","PersistHackApply")
+	StorageUtil.FormListAdd(None,"SGO.ActorList.Persist",Who,FALSE)
+	self.FormListUnlock(None,"SGO.ActorList.Persist")
 
 	Return
 EndFunction
 
 Function PersistHackClear(Actor Who)
-{clear the persistance hack. take into account known mods that also use this
-same persistance hack (more or less, mine only, for the time being) so that
+{clear the persistence hack. take into account known mods that also use this
+same persistence hack (more or less, mine only, for the time being) so that
 we don't fuck up those mods.}
 
+	self.FormListLock(None,"SGO.ActorList.Persist","PersistHackClear")
 	StorageUtil.FormListRemove(None,"SGO.ActorList.Persist",Who,TRUE)
+	self.FormListUnlock(None,"SGO.ActorList.Persist")
 
 	;; mods need to track their persistance hacking via a global scope form
 	;; list containing actor references if they want me to support it:
@@ -1922,16 +2166,18 @@ we don't fuck up those mods.}
 EndFunction
 
 ;/*****************************************************************************
-  __                   __    __                             __ 
+	__                   __    __                             __ 
  |  |_.----.---.-.----|  |--|__.-----.-----.   .---.-.-----|__|
  |   _|   _|  _  |  __|    <|  |     |  _  |   |  _  |  _  |  |
  |____|__| |___._|____|__|__|__|__|__|___  |   |___._|   __|__|
-                                     |_____|         |__|      
+	                                 |_____|         |__|      
 
 *****************************************************************************/;
 
 Function ActorTrackForGems(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors who are growing gems}
+
+	self.FormListLock(None,"SGO.ActorList.Gem","ActorTrackForGems")
 
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceGems) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Gem",Who,False)
@@ -1943,11 +2189,15 @@ Function ActorTrackForGems(Actor Who, Bool Enabled)
 		StorageUtil.FloatListClear(Who,"SGO.Actor.Gem.Data")
 	EndIf
 
+	self.FormListUnlock(None,"SGO.ActorList.Gem")
+
 	Return
 EndFunction
 
 Function ActorTrackForMilk(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating milk.}
+
+	self.FormListLock(None,"SGO.ActorList.Milk","ActorTrackForMilk")
 
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioProduceMilk) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Milk",Who,FALSE)
@@ -1959,11 +2209,15 @@ Function ActorTrackForMilk(Actor Who, Bool Enabled)
 		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Data")
 	EndIf
 
+	self.FormListUnlock(None,"SGO.ActorList.Milk")
+
 	Return
 EndFunction
 
 Function ActorTrackForSemen(Actor Who, Bool Enabled)
 {place or remove an actor from the list tracking actors generating semen.}
+
+	self.FormListLock(None,"SGO.ActorList.Semen","ActorTrackForSemen")
 
 	If(Enabled && Math.LogicalAnd(self.ActorGetBiologicalFunctions(Who),self.BioInseminate) != 0)
 		StorageUtil.FormListAdd(None,"SGO.ActorList.Semen",Who,FALSE)
@@ -1979,15 +2233,17 @@ Function ActorTrackForSemen(Actor Who, Bool Enabled)
 		;; loop after they are full.
 	EndIf
 
+	self.FormListUnlock(None,"SGO.ActorList.Semen")
+
 	Return
 EndFunction
 
 ;/*****************************************************************************
-  __             __                       __ 
+	__             __                       __ 
  |  |--.-----.--|  .--.--.   .---.-.-----|__|
  |  _  |  _  |  _  |  |  |   |  _  |  _  |  |
  |_____|_____|_____|___  |   |___._|   __|__|
-                   |_____|         |__|      
+	               |_____|         |__|      
 
 *****************************************************************************/;
 
@@ -2069,12 +2325,12 @@ Function ActorBodyUpdate_TesticleScale(Actor Who)
 EndFunction
 
 ;/*****************************************************************************
-                                       __ 
+	                                   __ 
  .-----.-----.--------.   .---.-.-----|__|
  |  _  |  -__|        |   |  _  |  _  |  |
  |___  |_____|__|__|__|   |___._|   __|__|
  |_____|                        |__|      
-                                          
+	                                      
 *****************************************************************************/;
 
 Bool Function ActorGemAdd(Actor Who, Float Value=0.0)
@@ -2097,7 +2353,7 @@ Bool Function ActorGemAdd(Actor Who, Float Value=0.0)
 	Return FALSE
 EndFunction
 
-Function ActorGemGiveTo(Actor Source, Actor Dest, Int Count=1)
+Function ActorGemGiveTo(Actor Source, Actor Dest, Int Count=1, String Bone="")
 {transfer a gem from one actor's oven to another actors inventory. both actors
 can be the same. this will mainly be used for a lulz transfer animation if
 i can find a lesbian one that is suitable or get an animator to make me one.}
@@ -2114,7 +2370,7 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 		EndIf
 
 		If(Dest == None)
-			self.ActorDropObject(Source,GemType,1,self.OptKickThingsWithHavok)
+			self.ActorDropObject(Source,GemType,1,self.OptKickThingsWithHavok,Bone)
 		Else
 			Dest.AddItem(GemType,1)
 		EndIf
@@ -2202,6 +2458,13 @@ actual gems it will prefer unfilled over filled.}
 	EndIf
 
 	Return None
+EndFunction
+
+Function ActorGemAdjustValue(Actor Who, Int Gem, Float Adjustment)
+{modify a gem's current state in our belly.}
+
+	StorageUtil.FloatListAdjust(Who,"SGO.Actor.Gem.Data",Gem,Adjustment)
+	Return
 EndFunction
 
 ;;;;;;;;
@@ -2309,6 +2572,7 @@ Float Function ActorGemGetTime(Actor Who)
 EndFunction
 
 Float Function ActorGemGetPercent(Actor Who)
+{return a percentage range 0 to 100}
 
 	Return (self.ActorGemGetWeight(Who,FALSE) / (self.ActorGemGetCapacity(Who) * 6)) * 100
 EndFunction
@@ -2334,7 +2598,14 @@ Float Function ActorGemGetWeight(Actor Who, Bool Overflow=FALSE)
 	Return Weight
 EndFunction
 
-Function ActorGemUpdateData(Actor Who, Bool Force=FALSE)
+Function ActorGemClearData(Actor Who)
+{drop gem data}
+
+	StorageUtil.FloatListClear(Who,"SGO.Actor.Gem.Data")
+	Return
+EndFunction
+
+Function ActorGemUpdateData(Actor Who, Bool Force=FALSE, Bool RequireLock=TRUE)
 {cause this actor to have its gem data recalculated. it will generate an array
 that is a snapshot of the current gem states, and that snapshot will be emitted
 in a mod event if a gem reached the next stage. this is probably the heaviest
@@ -2358,6 +2629,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
+		;;self.PrintLog("ActorGemUpdateData:TimeAbort " + Who.GetDisplayName())
 		Return
 	EndIf
 
@@ -2367,6 +2639,8 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 	;; we allow gems to grow larger than 6 for a mechanic later where we
 	;; will force labour if you wait too long. bodyscaling will clamp it
 	;; to six for the scales though.
+
+	;;self.PrintLog("ActorGemUpdateData:Start " + Who.GetDisplayName())
 
 	Int[] Progress = new Int[7]
 	Bool Progressed = FALSE
@@ -2378,6 +2652,12 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	While(x < Count)
 		Gem = StorageUtil.FloatListGet(Who,"SGO.Actor.Gem.Data",x)
+		If(Gem < 0)
+			;; we are able to drop below 0 now as we damage the gems and do not
+			;; bother clamping them for performance reasons.
+			Gem = 0
+		EndIf
+
 		Before = Gem
 
 		;; if mature time = 24hr, processed once an hour
@@ -2405,6 +2685,7 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Gem.Time")
 	self.ActorBodyUpdate_BellyScale(Who)
+	self.ActorApplyBellyEncumber(Who)
 
 	;;;;;;;;
 	;;;;;;;;
@@ -2420,15 +2701,17 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 		EndIf
 	EndIf
 
+	;;self.PrintLog("ActorGemUpdateData:Done " + Who.GetDisplayName())
+
 	Return
 EndFunction
 
 ;/*****************************************************************************
-           __ __ __                    __ 
+	       __ __ __                    __ 
  .--------|__|  |  |--.   .---.-.-----|__|
  |        |  |  |    <    |  _  |  _  |  |
  |__|__|__|__|__|__|__|   |___._|   __|__|
-                                |__|      
+	                            |__|      
 
 *****************************************************************************/;
 
@@ -2532,6 +2815,13 @@ Float Function ActorMilkGetWeight(Actor Who)
 	Return StorageUtil.GetFloatValue(Who,"SGO.Actor.Milk.Data")
 EndFunction
 
+Function ActorMilkClearData(Actor Who)
+{drop gem data}
+
+	StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Data")
+	Return
+EndFunction
+
 Function ActorMilkUpdateData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its milk data recalculated. if we have gained another
 full bottle then emit a mod event saying how many bottles are ready to go.}
@@ -2556,11 +2846,14 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	If(Time < 1.0 && !Force)
 		;; no need to recalculate this actor more than once a game hour.
 		;; self.PrintDebug(Who.GetDisplayName() + " skipping milk (not time)")
+		;;self.PrintLog("ActorMilkUpdateData:TimeAbort " + Who.GetDisplayName())
 		Return
 	EndIf
 
 	;;;;;;;;
 	;;;;;;;;
+
+	;;self.PrintLog("ActorMilkUpdateData:Start " + Who.GetDisplayName())
 
 	Float Capacity = self.ActorMilkGetCapacity(Who)
 	Float Overage = 0.0
@@ -2577,7 +2870,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		Milk = Capacity
 	EndIf
 
-	If(Milk / Capacity >= 0.5)
+	If(Milk / Capacity >= self.OptMilkLeakThresh)
 		self.ActorOverlayApply(Who,"MilkLeak","textures\\dcc-soulgem-oven\\milk-leak.dds",1,0.35)
 	Else
 		self.ActorOverlayClear(Who,"MilkLeak")
@@ -2586,6 +2879,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Milk.Data",Milk)
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Milk.Time")
 	self.ActorBodyUpdate_BreastScale(Who)
+	self.ActorApplyBreastInfluence(Who)
 
 	;;;;;;;;
 	;;;;;;;;
@@ -2607,15 +2901,17 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		self.EventSend_OnMilkProgress(Who,(Milk as Int),(Overage as Int))
 	EndIf
 
+	;;self.PrintLog("ActorMilkUpdateData:Done " + Who.GetDisplayName())
+
 	Return
 EndFunction
 
 ;/*****************************************************************************
-                                                   __ 
+	                                               __ 
  .-----.-----.--------.-----.-----.   .---.-.-----|__|
  |__ --|  -__|        |  -__|     |   |  _  |  _  |  |
  |_____|_____|__|__|__|_____|__|__|   |___._|   __|__|
-                                            |__|      
+	                                        |__|      
 
 *****************************************************************************/;
 
@@ -2742,6 +3038,13 @@ Float Function ActorSemenGetWeight(Actor Who)
 	Return Semen
 EndFunction
 
+Function ActorSemenClearData(Actor Who)
+{drop gem data}
+
+	StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Semen.Data")
+	Return
+EndFunction
+
 Function ActorSemenUpdateData(Actor Who, Bool Force=FALSE)
 {cause this actor to have its milk data recalculated. if we have gained another
 full bottle then emit a mod event saying how many bottles are ready to go.}
@@ -2805,7 +3108,7 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 EndFunction
 
 ;/*****************************************************************************
-             __                             __   __                   
+	         __                             __   __                   
  .---.-.----|  |_.-----.----.   .---.-.----|  |_|__.-----.-----.-----.
  |  _  |  __|   _|  _  |   _|   |  _  |  __|   _|  |  _  |     |__ --|
  |___._|____|____|_____|__|     |___._|____|____|__|_____|__|__|_____|
@@ -2832,9 +3135,16 @@ EndFunction
 Function ActorActionBirth_Solo(Actor Source)
 {single actor birthing sequence.}
 
+	Float WaitTime = 3.0
+	String Bone
+
+	If(self.ActorNoAnimate(Source))
+		WaitTime = 0.25
+	EndIf
+
 	self.BehaviourDefault(Source)
 	self.ActorRemoveChestpiece(Source)
-	self.ImmersiveAnimationBirthing(Source)
+	Bone = self.ImmersiveAnimationBirthing(Source)
 
 	If(Source == self.Player)
 		MiscUtil.SetFreeCameraState(TRUE,7.0)
@@ -2844,15 +3154,15 @@ Function ActorActionBirth_Solo(Actor Source)
 		self.EventSend_OnBirthing(Source)
 		self.ImmersiveBlush(Source,1.0,3,3.0)
 		self.ImmersiveExpression(Source,FALSE)
-		Utility.Wait(3.0)
+		Utility.Wait(WaitTime)
 		self.ImmersiveExpression(Source,TRUE)
 		self.ImmersiveSoundMoan(Source,FALSE)
-		Utility.Wait(3.0)
+		Utility.Wait(WaitTime)
 		self.ImmersiveSoundMoan(Source,TRUE)
-		self.ActorGemGiveTo(Source,None,1)
+		self.ActorGemGiveTo(Source,None,1,Bone)
 		Utility.Wait(3.0)
 		If(self.OptAnimationBirthing == -1)
-			self.ImmersiveAnimationBirthing(Source)
+			Bone = self.ImmersiveAnimationBirthing(Source)
 		EndIf
 	EndWhile
 
@@ -2862,14 +3172,21 @@ Function ActorActionBirth_Solo(Actor Source)
 
 	self.ImmersiveExpression(Source,FALSE)
 	self.ImmersiveAnimationIdle(Source)
-	self.ActorReplaceChestpiece(Source)
 	self.BehaviourClear(Source,TRUE)
+	self.ActorReplaceChestpiece(Source)
+	self.ActorApplyBellyEncumber(Source)
 
 	Return
 EndFunction
 
 Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 {dual actor birthing sequence - aka transfer from one to another.}
+
+	Float WaitTime = 3.0
+
+	If(self.ActorNoAnimate(Source) || self.ActorNoAnimate(Dest))
+		WaitTime = 0.25
+	EndIf
 
 	self.BehaviourDefault(Source)
 	self.BehaviourDefault(Dest)
@@ -2884,7 +3201,7 @@ Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 	While(self.ActorGemGetCount(Source) > 0 && self.ActorGemGetCount(Dest) < self.ActorGemGetCapacity(Dest))
 		self.EventSend_OnBirthing(Source)
 		self.ImmersiveBlush(Source,1.0,3,3.0)
-		Utility.Wait(3.0)
+		Utility.Wait(WaitTime)
 		self.ImmersiveExpression(Source,TRUE)
 		self.ImmersiveSoundMoan(Source,FALSE)
 		Utility.Wait(0.5)
@@ -2909,6 +3226,8 @@ Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 	self.ActorReplaceChestpiece(Dest)
 	self.BehaviourClear(Source,TRUE)
 	self.BehaviourClear(Dest,TRUE)
+	self.ActorApplyBellyEncumber(Source)
+	self.ActorApplyBellyEncumber(Dest)
 
 	Return
 EndFunction
@@ -2927,11 +3246,20 @@ Function ActorActionMilk(Actor Source, Actor Dest)
 		self.ActorActionMilk_Duo(Source,Dest)
 	EndIf
 
+	If(self.OptMilkLeakClear)
+		self.ActorOverlayClear(Source,"MilkLeak")
+	EndIf
+
 	Return
 EndFunction
 
 Function ActorActionMilk_Solo(Actor Source)
 {single actor milking sequence.}
+
+	Float WaitTime = 3.0
+	If(self.ActorNoAnimate(Source))
+		WaitTime = 0.25
+	EndIf
 
 	Actor Dest = None
 	If(Source == self.Player)
@@ -2945,7 +3273,7 @@ Function ActorActionMilk_Solo(Actor Source)
 	While(self.ActorMilkGetWeight(Source) >= 1.0)
 		self.EventSend_OnMilking(Source)
 		self.ImmersiveBlush(Source)
-		Utility.Wait(2.0)
+		Utility.Wait(WaitTime)
 		self.ImmersiveExpression(Source,TRUE)
 		self.ImmersiveSoundMoan(Source,FALSE)
 		Utility.Wait(2.0)
@@ -2956,8 +3284,8 @@ Function ActorActionMilk_Solo(Actor Source)
 	self.ImmersiveExpression(Source,FALSE)
 	self.ImmersiveAnimationIdle(Source)
 	self.ActorReplaceChestpiece(Source)
+	self.ActorApplyBreastInfluence(Source)
 	self.BehaviourClear(Source,TRUE)
-
 	Return
 EndFunction
 
@@ -2988,6 +3316,11 @@ EndFunction
 Function ActorActionWank_Solo(Actor Source)
 {single actor wanking sequence.}
 
+	Float WaitTime = 3.0
+	If(self.ActorNoAnimate(Source) || self.ActorNoAnimate(Dest))
+		WaitTime = 0.25
+	EndIf
+
 	Actor Dest = None
 	If(Source == self.Player)
 		Dest = self.Player
@@ -3001,13 +3334,13 @@ Function ActorActionWank_Solo(Actor Source)
 	While(self.ActorSemenGetWeight(Source) >= 1.0)
 		self.EventSend_OnWanking(Source)
 		self.ImmersiveBlush(Source)
-		Utility.Wait(3.0)
+		Utility.Wait(WaitTime)
 		self.ImmersiveExpression(Source,TRUE)
 		self.ImmersiveSoundMoan(Source,FALSE)
-		Utility.Wait(3.0)
+		Utility.Wait(WaitTime)
 		self.ActorSemenGiveTo(Source,Dest,1)
 		self.ImmersiveExpression(Source,FALSE)
-		Utility.Wait(1.0)
+		Utility.Wait(3.0)
 	EndWhile
 
 	self.ImmersiveExpression(Source,FALSE)
@@ -3028,6 +3361,13 @@ EndFunction
 Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 {gem insertion sequence.}
 
+	Float WaitTime = 3.0
+	Int Iter = 0
+	Int Count = ActorActionInsert_QueryCount(Source,Dest,GemType)
+	Float GemValue = self.GetGemValue(GemType) As Float
+
+	;; decide if we should even attempt.
+
 	If(self.ActorGemGetCount(Dest) >= self.ActorGemGetCapacity(Dest))
 		self.Print(Dest.GetDisplayName() + " cannot fit anymore gems.")
 		Return
@@ -3038,45 +3378,107 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 		Return
 	EndIf
 
-	Float GemValue = self.GetGemValue(GemType) As Float
+	;;;;;;;;
+	;;;;;;;;
+
+	;; decide on an animation delay.
+
+	If(self.ActorNoAnimate(Source) || self.ActorNoAnimate(Dest))
+		WaitTime = 1.25
+	EndIf
+
+	;; if inserting a fragment then pick a random number to start the value
+	;; at to represent its mass.
+
 	If(GemValue == 0.0)
-		;; if inserting a fragment then pick a random number
-		;; to start the value at to represent its mass.
 		GemValue = Utility.RandomFloat(0.1,0.6)
 	EndIf
 
+	;;;;;;;;
+	;;;;;;;;
+
+	self.Print(Dest.GetDisplayName() + " will insert " + Count + " " + GemType.GetName())
+	Source.RemoveItem(GemType,Count)
+
 	If(self.ActorNoAnimate(Dest))
-		;; shorthand version if we cannot animate.
-		self.ImmersiveBlush(Dest)
-		self.ImmersiveSoundMoan(Dest,FALSE)
-		self.ImmersiveExpression(Dest,TRUE)
-		Source.RemoveItem(GemType,1)
-		self.ActorGemAdd(Dest,GemValue)
-		Utility.Wait(1.5)
-		self.ImmersiveExpression(Dest,FALSE)
+	;; if the destination actor is set to not be animated then perform an
+	;; abbreviated sequence.
+
+		Iter = 0
+		While(Iter < Count)
+			self.ImmersiveBlush(Dest)
+			self.ImmersiveSoundMoan(Dest,FALSE)
+			self.ImmersiveExpression(Dest,TRUE)
+			self.EventSend_OnInserting(Dest,GemType)
+			Utility.Wait(WaitTime)
+
+			self.ActorGemAdd(Dest,GemValue)
+			self.EventSend_OnInserted(Dest,GemType)
+			self.ImmersiveExpression(Dest,FALSE)
+			Utility.Wait(WaitTime)
+
+			Iter += 1
+		EndWhile	
 	Else
-		;; full scene.
+	;; else run a full sexy animation sequence for total super immersion.
+
 		self.BehaviourDefault(Dest)
 		self.ActorRemoveChestpiece(Dest)
-		self.ImmersiveAnimationInsertion(Dest)
-		self.EventSend_OnInserting(Dest,GemType)
-		Source.RemoveItem(GemType,1)
-		Utility.Wait(3.0)
-		self.ImmersiveExpression(Dest,TRUE)
-		self.ImmersiveSoundMoan(Dest,FALSE)
-		self.ImmersiveBlush(Dest)
-		Utility.Wait(3.0)
-		self.ActorGemAdd(Dest,GemValue)
-		self.ImmersiveSoundMoan(Dest)
-		Utility.Wait(2.0)
-		self.EventSend_OnInserted(Dest,GemType)
+
+		Iter = 0
+		While(Iter < Count)
+			self.ImmersiveAnimationInsertion(Dest)
+			self.EventSend_OnInserting(Dest,GemType)
+			Utility.Wait(WaitTime)
+
+			self.ImmersiveExpression(Dest,TRUE)
+			self.ImmersiveSoundMoan(Dest,FALSE)
+			self.ImmersiveBlush(Dest)
+			Utility.Wait(WaitTime)
+
+			self.ActorGemAdd(Dest,GemValue)
+			self.ImmersiveSoundMoan(Dest)
+			self.EventSend_OnInserted(Dest,GemType)
+			Utility.Wait(WaitTime * 0.666)
+
+			self.ImmersiveExpression(Dest,FALSE)
+			Iter += 1
+		EndWhile
+
 		self.ImmersiveAnimationIdle(Dest)
 		self.ImmersiveExpression(Dest,FALSE)
 		self.ActorReplaceChestpiece(Dest)
-		self.BehaviourClear(Dest,TRUE)		
+		self.BehaviourClear(Dest,TRUE)
 	EndIf
 
 	Return
+EndFunction
+
+Int Function ActorActionInsert_QueryCount(Actor Source, Actor Dest, Form What)
+{ask how many gems you wish to insert.}
+
+	;; determine the maximum to default the entry to.
+
+	Int DestCount = self.ActorGemGetCapacity(Dest) - self.ActorGemGetCount(Dest)
+	Int SourceCount = Source.GetItemCount(What)
+	Int Output
+
+	self.Print(Dest.GetDisplayName() + " can fit " + DestCount + " more gems.")
+	self.Print(Source.GetDisplayName() + " has " + SourceCount + " " + What.GetName())
+	self.Print("How many should be inserted?")
+
+	If(SourceCount < DestCount)
+		DestCount = SourceCount
+	EndIf
+
+	;; ask the user
+
+	UIExtensions.InitMenu("UITextEntryMenu")
+	UIExtensions.SetMenuPropertyString("UITextEntryMenu","text",(DestCount as String))
+	UIExtensions.OpenMenu("UITextEntryMenu")
+	Output = UIExtensions.GetMenuResultString("UITextEntryMenu") as Int
+
+	Return PapyrusUtil.ClampInt(Output,0,DestCount)
 EndFunction
 
 Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
@@ -3128,11 +3530,11 @@ EndFunction
 
 
 ;/*****************************************************************************
-  __                                    __               __     __   
+	__                                    __               __     __   
  |__.--------.--------.-----.----.-----|__.-----.-----._|  |_ _|  |_ 
  |  |        |        |  -__|   _|__ --|  |  _  |     |_    _|_    _|
  |__|__|__|__|__|__|__|_____|__| |_____|__|_____|__|__| |__|   |__|  
-                                                                     
+	                                                                 
 *****************************************************************************/;
 
 ;; immersive events
@@ -3172,15 +3574,15 @@ Function Immersive_OnMilkFull(Actor Who)
 {send messages about milk being full.}
 
 	If(Who == self.Player && self.OptImmersivePlayer)
-		String[] Msg = new String[9]
+		String[] Msg = new String[8]
 		Msg[0] = "My breasts are sore and ready to burst."
 		Msg[1] = "If my breasts get any fuller they might pop!"
 		Msg[2] = "If my breasts get any larger they are going to need their own Jarl."
-		Msg[4] = "I bet I could get some great deals flashing these milkshakes around."
-		Msg[5] = "My back is sore from supporting these things."
-		Msg[6] = "These things are so full they are dribbling milk."
-		Msg[7] = "My boobs are so full. I wonder if anyone is thirsty?" ;; chajapa
-		Msg[8] = "I think my jugs are full." ;; chajapa
+		Msg[3] = "I bet I could get some great deals flashing these milkshakes around."
+		Msg[4] = "My back is sore from supporting these things."
+		Msg[5] = "These things are so full they are dribbling milk."
+		Msg[6] = "My boobs are so full. I wonder if anyone is thirsty?" ;; chajapa
+		Msg[7] = "I think my jugs are full." ;; chajapa
 		self.PrintRandom(Msg)
 	EndIf
 
@@ -3310,11 +3712,11 @@ Function ImmersiveAboutFace(Actor Who)
 	Return
 EndFunction
 
-Function ImmersiveAnimationBirthing(Actor Who)
-{play a birthing animation on the actor.}
+String Function ImmersiveAnimationBirthing(Actor Who)
+{play a birthing animation on the actor. returns the bone it should appear it.}
 
 	If(self.ActorNoAnimate(Who))
-		Return
+		Return ""
 	EndIf
 
 	self.ImmersiveSheatheWeapon(Who)
@@ -3329,39 +3731,55 @@ Function ImmersiveAnimationBirthing(Actor Who)
 	;; cannot compare a string to a none (cast missing or types unrelated)
 	;; roflmao.
 
-	String[] Ani = new String[8]
-	String[] Pre = new String[8]
+	String[] Ani = new String[6]
+	String[] Pre = new String[6]
+	String[] Bon = new String[6]
 
 	Ani[0] = "AP_BedMissionary_A1_S3"
 	Pre[0] = "AP_BedMissionary_A1_S1"
+	Bon[0] = "SkirtFBone02C"
 
 	Ani[1] = "DoggyStyle_A1_S4"
 	Pre[1] = "DoggyStyle_A1_S1"
+	Bon[1] = "SkirtBBone02C"
 
 	Ani[2] = "Missionary_A1_S4"
 	Pre[2] = "Missionary_A1_S1"
+	Bon[2] = "SkirtFBone02C"
 
-	Ani[3] = "Zyn_Missionary_A1_S1"
+	;;Ani[3] = "Zyn_Missionary_A1_S1"
+	;;Pre[3] = "----"
+	;;Bon[3] = "SkirtFBone02C"
+
+	Ani[3] = "ZaZAPCHorFB"
 	Pre[3] = "----"
+	Bon[3] = "SkirtBBone02C"
 
-	Ani[4] = "ZaZAPCCHorFB"
+	Ani[4] = "ZaZAPC201"
 	Pre[4] = "----"
+	Bon[4] = "SkirtBBone02C"
 
-	Ani[5] = "ZaZAPC201"
+	Ani[5] = "ZaZAPC202"
 	Pre[5] = "----"
+	Bon[5] = "SkirtBBone02C"
 
-	Ani[6] = "ZaZAPC202"
-	Pre[6] = "----"
-
-	Ani[7] = "ZaZAPC205"
-	Pre[7] = "----"
+	;;Ani[7] = "ZaZAPC205"
+	;;Pre[7] = "----"
+	;;Bon[7] = "SkirtBBone02C"
 
 	;;;;;;;;
 
 	Int Which
+	ObjectReference Here = Who.PlaceAtMe(self.StaticXMarker)
+
 	If(self.OptAnimationBirthing <= 0)
 		Which = Utility.RandomInt(0,(Ani.Length - 1))
 	Else
+		If(self.OptAnimationBirthing >= Ani.Length)
+			;; i shortened the list so handle that.
+			self.OptAnimationBirthing = Ani.Length - 1
+		EndIf
+
 		Which = self.OptAnimationBirthing - 1
 	EndIf
 
@@ -3369,8 +3787,15 @@ Function ImmersiveAnimationBirthing(Actor Who)
 		Debug.SendAnimationEvent(Who,Pre[Which])
 	EndIf
 
+	Who.SetVehicle(Here)
+	Who.StopTranslation()
+	Who.SplineTranslateTo(Here.GetPositionX(),Here.GetPositionY(),Here.GetPositionZ(),Here.GetAngleX(),Here.GetAngleY(),(Here.GetAngleZ() + 1.01),1.0,500,0.001)
+	Who.SetVehicle(None)
+	Here.Delete()
+
+
 	Debug.SendAnimationEvent(Who,Ani[Which])
-	Return
+	Return Bon[Which]
 EndFunction
 
 Function ImmersiveAnimationIdle(Actor Who, Bool Force=false)
@@ -3442,9 +3867,9 @@ EndFunction
 Function ImmersiveMenuCamera(Bool Enable)
 {move the camera when the menu opens.}
 
-  ;; disabling this because apparently i am the only one it is
-  ;; working for correctly.
-  Return
+	;; disabling this because apparently i am the only one it is
+	;; working for correctly.
+	Return
 
 	Int Camera = Game.GetCameraState()
 	If(Camera != 5 && Camera != 8 && Camera != 9 && Camera != 10)
@@ -3478,11 +3903,11 @@ EndFunction
 
 
 ;/*****************************************************************************
-                                             __ 
+	                                         __ 
  .--------.-----.-----.--.--.   .---.-.-----|__|
  |        |  -__|     |  |  |   |  _  |  _  |  |
  |__|__|__|_____|__|__|_____|   |___._|   __|__|
-                                      |__|      
+	                                  |__|      
 
 *****************************************************************************/;
 
@@ -3535,9 +3960,9 @@ Function MenuMain_Construct(Actor Who)
 
 	Bool ItemBirthEnable = FALSE
 	String ItemBirthLabel = "Not Pregnant"
-	String ItemBirthText = "Induce labour."
+	String ItemBirthText = "Perform Ultrasound."
 
-	If(self.ActorGemGetWeight(Who) > 0.0)
+	If(self.ActorGemGetCount(Who) > 0)
 		ItemBirthEnable = TRUE
 		ItemBirthLabel = "Gems (" + (self.ActorGemGetCount(Who)) + ", " + (self.ActorGemGetPercent(Who) as Int) + "%)"
 	EndIf
@@ -3634,7 +4059,8 @@ Function MenuMain_Handle(Actor Who)
 	ElseIf(Result == 3)
 		self.MenuActorOptions(Who)
 	ElseIf(Result == 4)
-		self.ActorActionBirth(Who,Who)
+		;;self.ActorActionBirth(Who,Who)
+		self.MenuSoulgemStatus(Who)
 	ElseIf(Result == 5)
 		self.ActorActionMilk(Who,Who)
 	ElseIf(Result == 6)
@@ -3675,9 +4101,21 @@ Function MenuSoulgemInsert_Construct(Actor Who)
 	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
 	Form[] List = self.ActorGemListInventory(self.Player)
 	Int x = 0
+	Int GemCount
+	String GemPrefix
 
 	While(x < List.Length)
-		Menu.AddEntryItem(List[x].GetName())
+		GemCount = self.Player.GetItemCount(List[x])
+		If(self.dcc_sgo_ListGemEmpty.Find(List[x]) >= 0)
+			GemPrefix = "< > "
+		ElseIf(self.dcc_sgo_ListGemFull.Find(List[x]) >= 0)
+			GemPrefix = "<=> "
+		Else
+			GemPrefix = ""
+		EndIf
+
+
+		Menu.AddEntryItem(GemPrefix + List[x].GetName() + " (" + GemCount + ")")
 		x += 1
 	EndWhile
 
@@ -3704,7 +4142,7 @@ Function MenuSoulgemInsert_Handle(Actor Who)
 	If(Result >= List.Length)
 		self.MenuMain(Who)
 		
-	Else
+	ElseIf(Result >= 0)	
 		self.ActorActionInsert(self.Player,Who,List[Result])
 	EndIf
 
@@ -3951,6 +4389,58 @@ Function MenuSoulgemTransfer_Handle(Actor Who)
 		self.ActorActionBirth(self.Player,Who)
 	ElseIf(Result == 6)
 		self.ActorActionBirth(Who,self.Player)
+	EndIf
+
+	Return
+EndFunction
+
+Function MenuSoulgemStatus(Actor Who)
+
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	self.MenuSoulgemStatus_Construct(Who)
+	self.MenuSoulgemStatus_Handle(Who)
+	return
+EndFunction
+
+Function MenuSoulgemStatus_Construct(Actor Who)
+
+	Int[] States = new Int[7]
+	Int Count = self.ActorGemGetCount(Who)
+	Int Iter
+	Int Current
+
+	Iter = 0
+	While(Iter < Count)
+		Current = PapyrusUtil.ClampInt((StorageUtil.FloatListGet(Who,"SGO.Actor.Gem.Data",Iter) as Int),0,6)
+		States[Current] = States[Current] + 1
+		Iter += 1
+	EndWhile
+
+	UIExtensions.InitMenu("UIWheelMenu")
+	self.MenuWheelSetItem(7,"Induce Labour","Birth the soulgems.",TRUE)
+
+	Iter = 0
+	While(Iter < 7)
+		self.MenuWheelSetItem(Iter,(States[Iter] + " " + self.GetGemName(Iter)),"",FALSE)
+		Iter += 1
+	EndWhile
+
+	Return
+EndFunction
+
+Function MenuSoulgemStatus_Handle(Actor Who)
+
+	Int Result = UIExtensions.OpenMenu("UIWheelMenu",Who)
+
+	If(Result == 7)
+		self.ActorActionBirth(Who,Who)
 	EndIf
 
 	Return

@@ -156,12 +156,21 @@ Event OnOptionSelect(Int Item)
 	ElseIf(Item == ItemEffectBellyEncumber)
 		Val = !SGO.OptEffectBellyEncumber
 		SGO.OptEffectBellyEncumber = Val
+	ElseIf(Item == ItemEffectBellyBonus)
+		Val = !SGO.OptEffectBellyBonus
+		SGO.OptEffectBellyBonus = Val
+	ElseIf(Item == ItemEffectBellyDamage)
+		Val = !SGO.OptEffectBellyDamage
+		SGO.OptEffectBellyDamage = Val
 	ElseIf(Item == ItemCumInflation)
 		Val = !SGO.OptCumInflation
 		SGO.OptCumInflation = Val
 	ElseIf(Item == ItemCumInflationHold)
 		Val = !SGO.OptCumInflationHold
 		SGO.OptCumInflationHold = Val
+	ElseIf(Item == ItemMilkLeakClear)
+		Val = !SGO.OptMilkLeakClear
+		SGO.OptMilkLeakClear = Val
 
 	;; ShowPageDebug()
 	ElseIf(Item == ItemDebug)
@@ -296,12 +305,37 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 1.0
 		Max = 10.0
 		Interval = 0.05
+	ElseIf(Item == ItemMilkLeakThresh)
+		Val = SGO.OptMilkLeakThresh * 100
+		Min = 0.0
+		Max = 100.0
+		Interval = 0.1
+	ElseIf(Item == ItemBellyDamageChance)
+		Val = SGO.OptBellyDamageChance
+		Min = 0.0
+		Max = 100.0
+		Interval = 1.0
+	ElseIf(Item == ItemBellyDamageChancePower)
+		Val = SGO.OptBellyDamageChancePower
+		Min = 0.0
+		Max = 100.0
+		Interval = 1.0
+	ElseIf(Item == ItemBellyDamageMax)
+		Val = SGO.OptBellyDamageMax
+		Min = 0.0
+		Max = 1.0
+		Interval = 0.01
+	ElseIf(Item == ItemBellyDamageMaxPower)
+		Val = SGO.OptBellyDamageMaxPower
+		Min = 0.0
+		Max = 1.0
+		Interval = 0.01
 
 	;; ShowPageAnimations()
 	ElseIf(Item == ItemAnimationBirthing)
 		Val = SGO.OptAnimationBirthing
 		Min = -1.0
-		Max = 8.0
+		Max = 6.0
 		Interval = 1.0
 
 	;; ShowPageDebug()
@@ -402,6 +436,21 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemScaleBellyCum)
 		SGO.OptScaleBellyCum = Val
 		Fmt = "{2}"
+	ElseIf(Item == ItemMilkLeakThresh)
+		SGO.OptMilkLeakThresh = Val / 100
+		Fmt = "{1}%"
+	ElseIf(Item == ItemBellyDamageChance)
+		SGO.OptBellyDamageChance = Val as Int
+		Fmt = "{0}%"
+	ElseIf(Item == ItemBellyDamageChancePower)
+		SGO.OptBellyDamageChancePower = Val as Int
+		Fmt = "{0}%"
+	ElseIf(Item == ItemBellyDamageMax)
+		SGO.OptBellyDamageMax = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemBellyDamageMaxPower)
+		SGO.OptBellyDamageMaxPower = Val
+		Fmt = "{2}"
 
 	;; ShowPageAnimations()
 	ElseIf(Item == ItemAnimationBirthing)
@@ -481,7 +530,11 @@ Event OnOptionHighlight(Int Item)
 	ElseIf(Item == ItemEffectBreastInfluence)
 		self.SetInfoText("The more milk your breasts contain, the better prices you get buying and selling shit.")
 	ElseIf(Item == ItemEffectBellyEncumber)
-		self.SetInfoText("The more mature the gems in your belly, the slower you move.")
+		self.SetInfoText("The more mature the gems in your belly, the slower you move. Max of -25 movement speed.")
+	ElseIf(Item == ItemEffectBellyBonus)
+		self.SetInfoText("The more mature the gems in your belly the more health and mana you get. Scales with your level, if 100% gemmed out, at level 1 you will get a bonus of 5 and at level 100 a bonus of 250.")
+	ElseIf(Item == ItemEffectBellyDamage)
+		self.SetInfoText("Taking damage has a chance to damage the gems you carry within you. Power attacks have a greater chance. Successfully blocking will prevent it.")
 	ElseIf(Item == ItemCumInflation)
 		self.SetInfoText("You will expand a little bit and squirt cum out slowly after sexy times.")
 	ElseIf(Item == ItemCumInflationHold)
@@ -492,6 +545,18 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("Level alchemy when milking. Set to 0 to disable. Set to 1 for normal rate.")
 	ElseIf(Item == ItemProgressEnchFactor)
 		self.SetInfoText("Level enchanting with birthing gems. Set to 0 to disable. Set to 1 for normal rate.")
+	ElseIf(Item == ItemMilkLeakThresh)
+		self.SetInfoText("At what percentage of capacity the breasts will appear to be leaking.")
+	ElseIf(Item == ItemMilkLeakClear)
+		self.SetInfoText("Enabled = Leak is removed after milking. Disabled = breasts will leak for a little while after milking.")
+	ElseIf(Item == ItemBellyDamageChance)
+		self.SetInfoText("The chance that a hit could cause damage to your gems.")
+	ElseIf(Item == ItemBellyDamageChancePower)
+		self.SetInfoText("The chance that a power attack hit could cause damage to your gems.")
+	ElseIf(Item == ItemBellyDamageMax)
+		self.SetInfoText("The maximum amount of damage that a hit can cause to a gem.")
+	ElseIf(Item == ItemBellyDamageMaxPower)
+		self.SetInfoText("The maximum amount of damage that a power attack hit can cause to a gem.")
 
 	;; ShowPageAnimations()
 	ElseIf(Item == ItemAnimationBirthing)
@@ -634,11 +699,19 @@ Int ItemImmersivePlayer
 Int ItemImmersiveNPC
 Int ItemEffectBreastInfluence
 Int ItemEffectBellyEncumber
+Int ItemEffectBellyBonus
+Int ItemEffectBellyDamage
+Int ItemBellyDamageChance
+Int ItemBellyDamageChancePower
+Int ItemBellyDamageMax
+Int ItemBellyDamageMaxPower
 Int ItemCumInflation
 Int ItemCumInflationHold
 Int ItemScaleBellyCum
 Int ItemProgressAlchFactor
 Int ItemProgressEnchFactor
+Int ItemMilkLeakThresh
+Int ItemMilkLeakClear
 
 Function ShowPageImmersion()
 	self.SetTitleText("IMMERSIVE++")
@@ -654,6 +727,8 @@ Function ShowPageImmersion()
 		self.AddHeaderOption("")
 	ItemEffectBreastInfluence = self.AddToggleOption("Breast Influence",SGO.OptEffectBreastInfluence)
 		ItemEffectBellyEncumber = self.AddToggleOption("Belly Encumberment",SGO.OptEffectBellyEncumber)
+	ItemEffectBellyBonus = self.AddToggleOption("Belly Bonus",SGO.OptEffectBellyBonus)
+		ItemEffectBellyDamage = self.AddToggleOption("Belly Damage",SGO.OptEffectBellyDamage)
 
 	self.AddHeaderOption("Cum Inflation")
 		self.AddHeaderOption("")
@@ -662,10 +737,22 @@ Function ShowPageImmersion()
 	ItemScaleBellyCum = self.AddSliderOption("Scale Value",SGO.OptScaleBellyCum,"{2}")
 		self.AddEmptyOption()
 
+	self.AddHeaderOption("Milk Effects")
+		self.AddHeaderOption("")
+	ItemMilkLeakThresh = self.AddSliderOption("Milk Leak Threshold",(SGO.OptMilkLeakThresh * 100),"{1}%")
+		ItemMilkLeakClear = self.AddToggleOption("Stop Leaking After Milking",SGO.OptMilkLeakClear)
+
 	self.AddHeaderOption("Skill Leveling")
 		self.AddHeaderOption("")
 	ItemProgressAlchFactor = self.AddSliderOption("Alchemy Leveling",SGO.OptProgressAlchFactor,"{2}x")
 		ItemProgressEnchFactor = self.AddSliderOption("Enchanting Leveling",SGO.OptProgressEnchFactor,"{2}x")
+
+	self.AddHeaderOption("Belly Damage")
+		self.AddHeaderOption("")
+	ItemBellyDamageChance = self.AddSliderOption("Normal Hit Chance",SGO.OptBellyDamageChance,"{0}%")
+		ItemBellyDamageChancePower = self.AddSliderOption("Power Hit Chance",SGO.OptBellyDamageChancePower,"{0}%")
+	ItemBellyDamageMax = self.AddSliderOption("Normal Hit Damage Max",SGO.OptBellyDamageMax,"{2}")
+		ItemBellyDamageMaxPower = self.AddSliderOption("Power Hit Damage Max",SGO.OptBellyDamageMaxPower,"{2}")
 
 	Return
 EndFunction

@@ -1,4 +1,5 @@
 #bof
 *.pex
 /*.zip
+/changes.txt
 #eof
