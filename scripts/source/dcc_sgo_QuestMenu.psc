@@ -134,6 +134,16 @@ Event OnOptionSelect(Int Item)
 		SGO.UninstallMod()
 		self.SetToggleOptionValue(Item,TRUE)
 		Utility.Wait(0.1)
+		Return
+
+	ElseIf(Item == ItemRestart)
+		self.SetToggleOptionValue(Item,TRUE)
+		Debug.MessageBox("Quit the menu and give me a moment to restart.")
+		Utility.Wait(0.25)
+		SGO.ResetMod_Spells()
+		SGO.ResetMod_Events()
+		Debug.MessageBox("Ok we're cool.")
+		Return
 
 	;; ShowPagePregnancy()
 	ElseIf(Item == ItemGemFilled)
@@ -569,6 +579,8 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("Time between checking the tracked actors for update.")
 	ElseIf(Item == ItemUpdateDelay)
 		self.SetInfoText("Time between updating each actor.")
+	ElseIf(Item == ItemRestart)
+		self.SetInfoText("Restart Soulgem Oven. Your settings and characters will remain as they were.")
 
 	;; bbq.
 	Else
@@ -591,6 +603,7 @@ EndFunction
 
 Int ItemEnabled
 Int ItemUninstall
+Int ItemRestart
 
 Function ShowPageGeneral()
 	self.SetTitleText("General Settings")
@@ -601,6 +614,7 @@ Function ShowPageGeneral()
 		self.AddHeaderOption("")
 	ItemEnabled = self.AddToggleOption("Mod Enabled",SGO.Enabled)
 		ItemUninstall = self.AddToggleOption("Uninstall Mod",FALSE)
+	ItemRestart = self.AddToggleOption("Restart Mod",FALSE)
 
 	Return
 EndFunction

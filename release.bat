@@ -1,0 +1,1 @@
+zip dcc-soulgem-oven-v%~1.zip -r interface meshes scripts seq textures dcc-soulgem-oven-000.esm

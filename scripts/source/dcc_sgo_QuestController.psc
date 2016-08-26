@@ -546,6 +546,7 @@ EndFunction
 Function ResetMod_Events()
 {cleanup and reinit of any event handling things.}
 
+	self.UnregisterForModEvent("SexLabActorGenderChange")
 	self.UnregisterForModEvent("OrgasmStart")
 	self.UpdateLoop.UnregisterForUpdate()
 
@@ -555,6 +556,7 @@ Function ResetMod_Events()
 		Return
 	EndIf
 
+	self.RegisterForModEvent("SexLabActorGenderChange","OnGenderChange")
 	self.RegisterForModEvent("OrgasmStart","OnEncounterEnding")
 	self.UpdateLoop.RegisterForSingleUpdate(self.OptUpdateInterval)
 	Return
@@ -772,6 +774,16 @@ value will be doubled.}
 	;; ((100 / 100) * 1) + 1 = 2.0
 
 	Return (((level / 100.0) * (value * factor)) + value) as Float
+EndFunction
+
+String Function GetSexWord(Int Sex)
+{get the word that describes what the sex is.}
+
+	If(Sex == 0 || Sex == 2)
+		Return "Male"
+	Else
+		Return "Female"
+	EndIf
 EndFunction
 
 Function PlayDualAnimation(Actor Who1, String Ani1, Actor Who2, String Ani2)
@@ -1187,6 +1199,20 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 	Return
 EndEvent
 
+Event OnGenderChange(Form Who, Int Gender)
+{handler for sexlab changing genders.}
+
+	;; drop this actor's cached value.
+	self.ActorGetBiologicalFunctions(Who as Actor, FALSE)
+	self.ActorTrackForSemen(Who as Actor,TRUE)
+	self.ActorTrackForGems(Who as Actor,TRUE)
+	self.ActorTrackForMilk(Who as Actor,TRUE)
+
+	Debug.Notification("[SGO] SexLab Gender Change Detected")
+
+	Return
+EndEvent
+
 Function EventSend_OnGemProgress(Actor Who, Int[] Progress)
 {emit an event listing the current state of the gems being carried.}
 
@@ -1520,6 +1546,26 @@ kick by havok.}
 	return ThisGuy
 EndFunction
 
+Int Function ActorGetSex(Actor Who, Bool Easy=TRUE)
+{get gender from sexlab collapsing the sexlab genders in it, always
+returning 0 or 1.}
+
+	;; my understanding of the new sexlab genders by looking at the code
+	;; in the GetGender function.
+	;; 0 = male
+	;; 1 = female
+	;; 2 = manimal
+	;; 3 = fanimal
+
+	Int Value = SexLab.GetGender(Who)
+
+	If(Easy && Value >= 2)
+		Value -= 2;
+	EndIf
+
+	Return Value;
+EndFunction
+
 Int Function ActorGetBiologicalFunctions(Actor Who, Bool Cached=TRUE)
 {determine what this actor's body is able to accomplish. returns a bitwised
 integer that defines the capaiblities of this actor.}
@@ -1536,9 +1582,52 @@ integer that defines the capaiblities of this actor.}
 		EndIf
 	EndIf
 
-	Int Sex = SexLab.GetGender(Who)
+	Int Sex = self.ActorGetSex(Who,FALSE)
+	self.PrintDebug(Who.GetDisplayName() + " is " + self.GetSexWord(Sex) + " according to sexlab")
 
-	If(Sex == 2)
+	;; figure out if we were a beast.
+
+	If(Sex >= 2)
+		Sex -= 2
+		Value = Math.LogicalOr(Value, self.BioIsBeast)
+	EndIf
+
+	;; figure out what the body can do based on the sex.
+
+	If(Sex == 0)
+		Value = Math.LogicalOr(Value, self.BioInseminate)
+	Else
+		Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
+	EndIf
+
+	;; figure out what the user wanted. negatives override positives.
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCanInseminate))
+		Value = Math.LogicalOr(Value, self.BioInseminate)
+	EndIf
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCanProduceGems))
+		Value = Math.LogicalOr(Value, self.BioProduceGems)
+	EndIf
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCanProduceMilk))
+		Value = Math.LogicalOr(Value, self.BioProduceMilk)
+	EndIf
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCannotInseminate))
+		Value = Math.LogicalAnd(Value, Math.LogicalNot(self.BioInseminate))
+	EndIf
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCannotProduceGems))
+		Value = Math.LogicalAnd(Value, Math.LogicalNot(self.BioProduceGems))
+	EndIf
+
+	If(Who.IsInFaction(self.dcc_sgo_FactionCannotProduceMilk))
+		Value = Math.LogicalAnd(Value, Math.LogicalNot(self.BioProduceMilk))
+	EndIf
+
+	;/* <= v308
+	If(Sex >= 2)
 		Value += self.BioIsBeast
 	EndIf
 
@@ -1553,8 +1642,10 @@ integer that defines the capaiblities of this actor.}
 	If((Sex == 1 || Who.IsInFaction(self.dcc_sgo_FactionCanProduceMilk)) && !Who.IsInFaction(self.dcc_sgo_FactionCannotProduceMilk))
 		Value += self.BioProduceMilk
 	EndIf
+	*/;
 
 	StorageUtil.SetIntValue(Who,"SGO.Actor.Biologicalfunctions",Value)
+	self.PrintDebug(Who.GetDisplayName() + " features " + Value + " according to soulgem oven")
 
 	Return Value
 EndFunction
@@ -1584,16 +1675,15 @@ you must do each function individually.}
 		Who.RemoveFromFaction(ToDisable)
 		Who.AddToFaction(ToEnable)
 
-		If(Func == self.BioInseminate)
-			self.ActorTrackForSemen(Who,TRUE)
-		EndIf
+		self.ActorTrackForSemen(Who,TRUE)
+		self.ActorTrackForGems(Who,TRUE)
+		self.ActorTrackForMilk(Who,TRUE)
 	Else
 		Who.RemoveFromFaction(ToEnable)
 		Who.AddToFaction(ToDisable)
 
 		If(self.OptResetDataOnDisable)
 			If(Func == self.BioInseminate)
-				self.ActorTrackForSemen(Who,FALSE)
 				self.ActorSemenClearData(Who)
 			ElseIf(Func == self.BioProduceMilk)
 				self.ActorMilkClearData(Who)
@@ -2185,8 +2275,8 @@ Function ActorTrackForGems(Actor Who, Bool Enabled)
 		self.PersistHackApply(Who)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Gem",Who,True)
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Gem.Time")
-		StorageUtil.FloatListClear(Who,"SGO.Actor.Gem.Data")
+		;;StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Gem.Time")
+		;;StorageUtil.FloatListClear(Who,"SGO.Actor.Gem.Data")
 	EndIf
 
 	self.FormListUnlock(None,"SGO.ActorList.Gem")
@@ -2205,8 +2295,8 @@ Function ActorTrackForMilk(Actor Who, Bool Enabled)
 		self.PersistHackApply(Who)
 	Else
 		StorageUtil.FormListRemove(None,"SGO.ActorList.Milk",Who,TRUE)
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Time")
-		StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Data")
+		;;StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Time")
+		;;StorageUtil.UnsetFloatValue(Who,"SGO.Actor.Milk.Data")
 	EndIf
 
 	self.FormListUnlock(None,"SGO.ActorList.Milk")
@@ -3462,6 +3552,12 @@ Int Function ActorActionInsert_QueryCount(Actor Source, Actor Dest, Form What)
 	Int DestCount = self.ActorGemGetCapacity(Dest) - self.ActorGemGetCount(Dest)
 	Int SourceCount = Source.GetItemCount(What)
 	Int Output
+
+	;; if the only reasonable choice is 1 then just do it.
+
+	If(SourceCount == 1 || DestCount == 1)
+		Return 1
+	EndIf
 
 	self.Print(Dest.GetDisplayName() + " can fit " + DestCount + " more gems.")
 	self.Print(Source.GetDisplayName() + " has " + SourceCount + " " + What.GetName())
