@@ -441,6 +441,9 @@ Bool Property OptResetNodeOnDisable = TRUE Auto Hidden
 Bool Property OptResetDataOnDisable = TRUE Auto Hidden
 {drop all the preg/milk/semen data when that function is disabled.}
 
+Bool Property OptSexlabStrip = TRUE Auto Hidden
+{if we should use sexlab's stripping options.}
+
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Int Property BioProduceGems = 1  AutoReadOnly
@@ -1781,22 +1784,39 @@ is the storageutil name for the data you want.}
 	Return
 EndFunction
 
-Function ActorRemoveChestpiece(Actor who)
+Function ActorRemoveChestpiece(Actor Who)
 {remove an actor's chestpiece.}
 
-	If(Who.GetWornForm(0x00000004) != None)
-		StorageUtil.SetFormValue(Who,"SGO.Actor.Armor.Chest",Who.GetWornForm(0x00000004))
-		Who.UnequipItemSlot(32)
-		Who.QueueNiNodeUpdate()
+	If(self.OptSexlabStrip)
+		Form[] Items
+		Int Iter = 0
+
+		Items = SexLab.StripActor(Who,None,FALSE,FALSE)
+		While(Iter < Items.Length)
+			StorageUtil.FormListAdd(Who,"SGO.Actor.Armor",Items[Iter],TRUE)
+			Iter += 1
+		EndWhile
+
+	Else
+		If(Who.GetWornForm(0x00000004) != None)
+			StorageUtil.SetFormValue(Who,"SGO.Actor.Armor.Chest",Who.GetWornForm(0x00000004))
+			Who.UnequipItemSlot(32)
+			Who.QueueNiNodeUpdate()
+		EndIf
 	EndIf
 EndFunction
 
 Function ActorReplaceChestpiece(Actor Who)
 {replace an actor's chestpiece.}
 
-	If(StorageUtil.GetFormValue(Who,"SGO.Actor.Armor.Chest"))
-		Who.EquipItem(Storageutil.GetFormValue(Who,"SGO.Actor.Armor.Chest"),FALSE,TRUE)
-		StorageUtil.SetFormValue(who,"SGO.Actor.Armor.Chest",None)
+	If(self.OptSexLabStrip)
+		SexLab.UnstripActor(Who, StorageUtil.FormListToArray(Who,"SGO.Actor.Armor"), FALSE)
+		StorageUtil.FormListClear(Who,"SGO.Actor.Armor")
+	Else
+		If(StorageUtil.GetFormValue(Who,"SGO.Actor.Armor.Chest"))
+			Who.EquipItem(Storageutil.GetFormValue(Who,"SGO.Actor.Armor.Chest"),FALSE,TRUE)
+			StorageUtil.SetFormValue(who,"SGO.Actor.Armor.Chest",None)
+		EndIf
 	EndIf
 EndFunction
 

@@ -123,7 +123,6 @@ Event OnOptionSelect(Int Item)
 	If(Item == ItemEnabled)
 		Val = !SGO.Enabled
 		SGO.Enabled = Val
-
 		If(SGO.Enabled)
 			SGO.RegisterForSingleUpdate(SGO.OptUpdateInterval)
 		Else
@@ -144,6 +143,10 @@ Event OnOptionSelect(Int Item)
 		SGO.ResetMod_Events()
 		Debug.MessageBox("Ok we're cool.")
 		Return
+
+	ElseIf(Item == ItemSexlabStrip)
+		Val = !SGO.OptSexlabStrip
+		SGO.OptSexlabStrip = Val
 
 	;; ShowPagePregnancy()
 	ElseIf(Item == ItemGemFilled)
@@ -492,8 +495,12 @@ EndEvent
 
 Event OnOptionHighlight(Int Item)
 
+	;; ShowPageGeneral()
+	If(Item == ItemSexlabStrip)
+		self.SetInfoText("Use the settings in SexLab to unequip armor when milking and birthing.")
+
 	;; ShowPagePregnancy()
-	If(Item == ItemGemMaxCapacity)
+	ElseIf(Item == ItemGemMaxCapacity)
 		self.SetInfoText("Maximum number of gems that can be incubated at one time.")
 	ElseIf(Item == ItemGemMatureTime)
 		self.SetInfoText("How long it takes for 1 gem to go from nothing to black (in days).")
@@ -604,6 +611,7 @@ EndFunction
 Int ItemEnabled
 Int ItemUninstall
 Int ItemRestart
+Int ItemSexlabStrip
 
 Function ShowPageGeneral()
 	self.SetTitleText("General Settings")
@@ -615,6 +623,10 @@ Function ShowPageGeneral()
 	ItemEnabled = self.AddToggleOption("Mod Enabled",SGO.Enabled)
 		ItemUninstall = self.AddToggleOption("Uninstall Mod",FALSE)
 	ItemRestart = self.AddToggleOption("Restart Mod",FALSE)
+		self.AddEmptyOption()
+	self.AddHeaderOption("Basic Settings")
+		self.AddHeaderOption("")
+	ItemSexlabStrip = self.AddToggleOption("Use SexLab Strip Settings",SGO.OptSexlabStrip)
 
 	Return
 EndFunction
