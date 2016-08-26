@@ -83,7 +83,7 @@ Function OnUpdate_GemData()
 		Who = ActorList[Iter] as Actor
 
 		If(Who != None && Who.Is3dLoaded())
-			SGO.PrintLog("UpdateLoop:GemData " + Who.GetDisplayName())
+			;;SGO.PrintLog("UpdateLoop:GemData " + Who.GetDisplayName())
 			SGO.ActorGemUpdateData(Who)
 		EndIf
 
@@ -105,7 +105,7 @@ Function OnUpdate_MilkData()
 		Who = ActorList[Iter] as Actor
 
 		If(Who != None && Who.Is3dLoaded())
-			SGO.PrintLog("UpdateLoop:MilkData " + Who.GetDisplayName())
+			;;SGO.PrintLog("UpdateLoop:MilkData " + Who.GetDisplayName())
 			SGO.ActorMilkUpdateData(Who)
 		EndIf
 
@@ -127,7 +127,7 @@ Function OnUpdate_SemenData()
 		Who = ActorList[Iter] as Actor
 
 		If(Who != None && Who.Is3dLoaded())
-			SGO.PrintLog("UpdateLoop:SemenData " + Who.GetDisplayName())
+			;;SGO.PrintLog("UpdateLoop:SemenData " + Who.GetDisplayName())
 			SGO.ActorSemenUpdateData(Who)
 			Utility.Wait(SGO.OptUpdateDelay)
 		EndIf
