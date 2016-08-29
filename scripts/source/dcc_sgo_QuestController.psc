@@ -27,7 +27,7 @@ Int Function GetVersion() Global
 {report a version number. this is new to sgo3. the first public release will
 report 300, following the same system i have for the versioning in the past.}
 
-	Return 308
+	Return 310
 EndFunction
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -326,11 +326,17 @@ FLoat Property OptScaleBellyCurve = 1.75 Auto Hidden
 Float Property OptScaleBellyMax = 5.0 Auto Hidden
 {the maximum size of the belly when full up.}
 
+Float Property OptScaleBellyHigh = 0.0 Auto Hidden
+{modifier while at the high end of the weight scale}
+
 Float Property OptScaleBreastCurve = 1.5 Auto Hidden
 {the value that tweaks the curve for breasts.}
 
 Float Property OptScaleBreastMax = 3.5 Auto Hidden
 {the maximum size of the breasts when filled up.}
+
+Float Property OptScaleBreastHigh = 0.0 Auto Hidden
+{modifier while at the high end of the weight scale}
 
 Float Property OptScaleTesticleCurve = 1.25 Auto Hidden
 {the value that scales the curve for testicles.}
@@ -401,6 +407,15 @@ Float Property OptBellyDamageMax = 0.2 Auto Hidden
 Float Property OptBellyDamageMaxPower = 0.4 Auto Hidden
 {max value a gem can be hurt for by a power attack}
 
+Int Property OptAchievementActorGemGrowth = 100 Auto Hidden
+{how many gem levels to get incubator achive}
+
+Int Property OptAchievementActorMilkProduce = 100 Auto Hidden
+{how many bottles to milk to get moomoo achive}
+
+Int Property OptAchievementActorInserts = 100 Auto Hidden
+{how many gems you have to insert to get unbirthing}
+
 ;; leveling options ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 Float Property OptProgressAlchFactor = 1.0 Auto Hidden
@@ -443,6 +458,12 @@ Bool Property OptResetDataOnDisable = TRUE Auto Hidden
 
 Bool Property OptSexlabStrip = TRUE Auto Hidden
 {if we should use sexlab's stripping options.}
+
+Bool Property OptAchievements = TRUE Auto Hidden
+{if we should do Achievements lol}
+
+Bool Property OptAchievementBonus = TRUE Auto Hidden
+{if there should be a bonus effect for Achievements.}
 
 ;; constants ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -832,6 +853,10 @@ EndFunction
 Float Function BoneCurveValue(Actor Who, String Bone, Float Value)
 {curve the given Value based on the actors current value and the curve.}
 
+	If(Value <= 1.0)
+		Return Value;
+	EndIf
+
 	Float Curve = 2.0
 
 	If(Bone == "NPC Belly" || Bone == "Belly")
@@ -1009,6 +1034,78 @@ Function ActorOverlayClear(Actor Who, String OverlayName)
 	Return
 EndFunction
 
+;; stat manipulation ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Function StatBump(Form Who, String What, Float Amount=1.0)
+{incremement or decremement a stat on a form or global if none. bumping stats
+will trigger Achievement checks.}
+
+	Float OldValue = StorageUtil.AdjustFloatValue(Who,("SGO.Stat." + What),Amount)
+
+	If(self.OptAchievements && Who as Actor)
+		If(What == "GemGrowth")
+			self.AchievementActorGemGrowth(Who as Actor,(OldValue + Amount))
+		ElseIf(What == "MilkProduce")
+			self.AchievementActorMilkProduce(Who as Actor,(OldValue + Amount))
+		ElseIf(What == "Inserts")
+			self.AchievementActorInserts(Who as Actor,(OldValue + Amount))
+		EndIf
+	EndIf
+
+	Return
+EndFunction
+
+Float Function StatGetFloat(Form Who, String What)
+{fetch the requested stat in its native float}
+
+	Return StorageUtil.GetFloatValue(Who,("SGO.Stat." + What))
+EndFunction
+
+Int Function StatGetInt(Form Who, String What)
+{fetch the requested stat as an integer}
+
+	Return self.StatGetFloat(Who,What) as Int
+EndFunction
+
+Function AchievementActorGemGrowth(Actor Who, Float Value)
+{Achievement: incubator}
+
+	If(Value >= self.OptAchievementActorGemGrowth)
+		If(self.ActorModGetValue(Who,"Gem.Rate","SGO.Achievement.GemGrowth") == 0.0)
+			self.ActorModSetValue(Who ,"Gem.Rate","SGO.Achievement.GemGrowth",0.1)
+			Debug.MessageBox(Who.GetDisplayName() + " Achievement: Incubator\nIncubated 100 levels worth of gems. They can now produce gems 10% faster than before.")
+		EndIf
+	EndIf
+
+	Return
+EndFunction
+
+Function AchievementActorMilkProduce(Actor Who, Float Value)
+{Achievement: moo moo}
+
+	If(Value >= self.OptAchievementActorMilkProduce)
+		If(self.ActorModGetValue(Who,"Milk.Rate","SGO.Achievement.MilkProduce") == 0.0)
+			self.ActorModSetValue(Who,"Milk.Rate","SGO.Achievement.MilkProduce",0.1)
+			Debug.MessageBox(Who.GetDisplayName() + " Achievement: Moo Moo\nProduced 100 bottles (25 litres) worth of milk. They can now produce milk 10% faster than before.")
+		EndIf
+	EndIf
+
+	Return
+EndFunction
+
+Function AchievementActorInserts(Actor Who, Float Value)
+{Achievement: unbirthing}
+
+	If(Value >= self.OptAchievementActorInserts)
+		If(self.ActorModGetValue(Who,"Gem.Capacity","SGO.Achievement.Inserts") == 0.0)
+			self.ActorModSetValue(Who,"Gem.Capacity","SGO.Achievement.Inserts",1)
+			Debug.MessageBox(Who.GetDisplayName() + " Achievement: Unbirthing\nForcefully inserted 100 gems. They can now hold an extra gem.")
+		EndIf
+	EndIf
+
+	Return
+EndFunction
+
 ;/*****************************************************************************
 	 __                            __                        
  .--|  .-----.-----.-----.-----.--|  .-----.-----.----.--.--.
@@ -1179,6 +1276,8 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) == self.BioProduceGems)
 			If(Preg)				
 				self.ActorGemAdd(ActorList[x])
+				self.StatBump(None,"Preg")
+				self.StatBump(ActorList[x],"Preg")
 			EndIf
 
 			If(self.OptCumInflation)
@@ -2385,7 +2484,7 @@ Function ActorBodyUpdate_BellyScale(Actor Who)
 	;; 6 gems ((36 / 36) * 3.0) + 1 == 4.0
 
 	Belly += ((self.ActorGemGetWeight(Who,FALSE) / (6 * self.ActorGemGetCapacity(Who))) * ScaleMax)
-	Belly = PapyrusUtil.ClampFloat(Belly,0.01,ScaleMax)
+	Belly = PapyrusUtil.ClampFloat(Belly,0.01,ScaleMax) * (((Who.GetLeveledActorBase().GetWeight() / 100) * self.OptScaleBellyHigh) + 1)
 
 	self.BoneSetScale(Who,"NPC Belly","SGO.Scale",Belly)
 	Return
@@ -2406,7 +2505,7 @@ Function ActorBodyUpdate_BreastScale(Actor Who)
 	;; 3 milk ((3 / 3) * 2.0) + 1 == 3.0
 
 	Breast += ((self.ActorMilkGetWeight(Who) / self.ActorMilkGetCapacity(Who)) * ScaleMax)
-	Breast = PapyrusUtil.ClampFloat(Breast,0.01,ScaleMax)
+	Breast = PapyrusUtil.ClampFloat(Breast,0.01,ScaleMax) * (((Who.GetLeveledActorBase().GetWeight() / 100) * self.OptScaleBreastHigh) + 1)
 
 	self.BoneSetScale(Who,"NPC L Breast","SGO.Scale",Breast)
 	self.BoneSetScale(Who,"NPC R Breast","SGO.Scale",Breast)
@@ -2486,6 +2585,8 @@ i can find a lesbian one that is suitable or get an animator to make me one.}
 		EndIf
 
 		self.ActorProgressEnchanting(Source,self.GetGemValue(GemType))
+		self.StatBump(None,"Gems")
+		self.StatBump(Source,"Gems")
 		self.EventSend_OnBirthed(Source,GemType)
 		x += 1
 	EndWhile
@@ -2582,9 +2683,9 @@ EndFunction
 Int Function ActorGemGetCapacity(Actor Who)
 {determine how many gems this actor should be able to carry.}
 
-	;; no mods return 0. a mod total of 1.5 means i want to
-	;; be able to carry 150% more gems.
-	Return (self.OptGemMaxCapacity * self.ActorModGetMultiplier(Who,"Gem.Capacity")) as Int
+	;; the actor mod allows to add or remove a gem slot from this actor.
+
+	Return (self.OptGemMaxCapacity + self.ActorModGetTotal(Who,"Gem.Capacity")) as Int
 EndFunction
 
 Int Function ActorGemGetCount(Actor Who)
@@ -2677,7 +2778,7 @@ Float Function ActorGemGetTime(Actor Who)
 {determine how fast gems should be generating for this actor.}
 
 	;; the mod is 0 when empty. if we have a total of 1.5 that means i want
-	;; 150% more time spent to mature the gem.
+	;; 150% faster production rate.
 	Return self.OptGemMatureTime * (self.ActorModGetMultiplier(Who,"Gem.Rate"))
 EndFunction
 
@@ -2782,6 +2883,8 @@ function in this mod, as data is flying in and out of papyrusutil constantly.}
 
 		Progress[PapyrusUtil.ClampInt(Gem as Int,0,6)] = Progress[PapyrusUtil.ClampInt(Gem as Int,0,6)] + 1
 		Total += Gem
+		self.StatBump(None,"GemGrowth",(Gem-Before))
+		self.StatBump(Who,"GemGrowth",(Gem-Before))
 
 		If(Before as Int < Gem as Int)
 			;; if the gem reached the next stage then mark it down
@@ -2843,11 +2946,13 @@ same.}
 		self.ActorProgressAlchemy(Source)
 
 		If(Dest == None)
-			self.ActorDropObject(Source,MilkType,1,self.OptKickThingsWithHavok)
+			self.ActorDropObject(Source,MilkType,1,self.OptKickThingsWithHavok,"NPC L Breast")
 		Else
 			Dest.AddItem(MilkType,1)
 		EndIf
 
+		self.StatBump(None,"Milks")
+		self.StatBump(Source,"Milks")
 		self.EventSend_OnMilked(Source,MilkType)
 		x += 1
 	EndWhile
@@ -2979,6 +3084,8 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		Overage = Milk - Capacity
 		Milk = Capacity
 	EndIf
+	self.StatBump(None,"MilkProduce",(Milk-Before))
+	self.StatBump(Who,"MilkProduce",(Milk-Before))
 
 	If(Milk / Capacity >= self.OptMilkLeakThresh)
 		self.ActorOverlayApply(Who,"MilkLeak","textures\\dcc-soulgem-oven\\milk-leak.dds",1,0.35)
@@ -3048,6 +3155,8 @@ same.}
 			Dest.AddItem(SemenType,1)
 		EndIf
 
+		self.StatBump(None,"Semen")
+		self.StatBump(Source,"Semen")
 		self.EventSend_OnWanked(Source,SemenType)
 		x += 1
 	EndWhile
@@ -3197,6 +3306,8 @@ full bottle then emit a mod event saying how many bottles are ready to go.}
 		self.Immersive_OnSemenFull(Who)
 		Semen = Capacity
 	EndIf
+	self.StatBump(None,"SemenProduce",(Semen-Before))
+	self.StatBump(Who,"SemenProduce",(Semen-Before))
 
 	StorageUtil.SetFloatValue(Who,"SGO.Actor.Semen.Data",Semen)
 	self.ActorSetTimeUpdated(Who,"SGO.Actor.Semen.Time")
@@ -3319,6 +3430,9 @@ Function ActorActionBirth_Duo(Actor Source, Actor Dest)
 		self.ImmersiveExpression(Dest,TRUE)
 		self.ImmersiveSoundMoan(Dest,TRUE)
 		self.ActorGemAdd(Dest,self.ActorGemRemoveFloat(Source))
+		self.StatBump(None,"Transfers")
+		self.StatBump(Source,"TransfersOut")
+		self.StatBump(Dest,"TransfersIn")
 		Utility.Wait(3.0)
 		self.ImmersiveExpression(Source,FALSE)
 		self.ImmersiveExpression(Dest,FALSE)
@@ -3523,6 +3637,8 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 			Utility.Wait(WaitTime)
 
 			self.ActorGemAdd(Dest,GemValue)
+			self.StatBump(None,"Inserts")
+			self.StatBump(Dest,"Inserts")
 			self.EventSend_OnInserted(Dest,GemType)
 			self.ImmersiveExpression(Dest,FALSE)
 			Utility.Wait(WaitTime)
@@ -3547,6 +3663,8 @@ Function ActorActionInsert(Actor Source, Actor Dest, Form GemType)
 			Utility.Wait(WaitTime)
 
 			self.ActorGemAdd(Dest,GemValue)
+			self.StatBump(None,"Inserts")
+			self.StatBump(Dest,"Inserts")
 			self.ImmersiveSoundMoan(Dest)
 			self.EventSend_OnInserted(Dest,GemType)
 			Utility.Wait(WaitTime * 0.666)
@@ -3575,7 +3693,7 @@ Int Function ActorActionInsert_QueryCount(Actor Source, Actor Dest, Form What)
 
 	;; if the only reasonable choice is 1 then just do it.
 
-	If(SourceCount == 1 || DestCount == 1)
+	If(SourceCount <= 1 || DestCount <= 1)
 		Return 1
 	EndIf
 
@@ -3617,6 +3735,8 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 		self.ImmersiveExpression(Dest,TRUE)
 		Source.RemoveItem(What,1)
 		self.ActorGemAdd(Dest,0)
+		self.StatBump(None,"Inseminations")
+		self.StatBump(Dest,"Inseminations")
 		Utility.Wait(1.5)
 		self.ImmersiveExpression(Dest,FALSE)
 	Else
@@ -3632,6 +3752,8 @@ Function ActorActionInseminate(Actor Source, Actor Dest, Form What)
 		self.ImmersiveBlush(Dest)
 		Utility.Wait(3.0)
 		self.ActorGemAdd(Dest,0)
+		self.StatBump(None,"Inseminations")
+		self.StatBump(Dest,"Inseminations")
 		self.ImmersiveSoundMoan(Dest)
 		Utility.Wait(2.0)
 		self.EventSend_OnInseminated(Dest,What)
@@ -4061,7 +4183,6 @@ Function MenuMain(Actor Who=None)
 		Return
 	EndIf
 
-
 	self.MenuMain_Construct(Who)
 	self.MenuMain_Handle(Who)
 	Return
@@ -4151,6 +4272,7 @@ Function MenuMain_Construct(Actor Who)
 	self.MenuWheelSetItem(4,ItemBirthLabel,ItemBirthText,ItemBirthEnable) ;; gem status + birth
 	self.MenuWheelSetItem(5,ItemMilkLabel,ItemMilkText,ItemMilkEnable) ;; milk status + milk
 	self.MenuWheelSetItem(6,ItemWankLabel,ItemWankText,ItemWankEnable) ;; semen status + wank
+	self.MenuWheelSetItem(7,"Actor Stats","Show statistics for this actor.",TRUE) ;; actor stats
 	Return
 EndFunction
 
@@ -4181,6 +4303,8 @@ Function MenuMain_Handle(Actor Who)
 		self.ActorActionMilk(Who,Who)
 	ElseIf(Result == 6)
 		self.ActorActionWank(Who,Who)
+	ElseIf(Result == 7)
+		self.MenuActorStats(Who)
 	EndIf
 
 	Return
@@ -4559,5 +4683,74 @@ Function MenuSoulgemStatus_Handle(Actor Who)
 		self.ActorActionBirth(Who,Who)
 	EndIf
 
+	Return
+EndFunction
+
+Function MenuActorStats(Actor Who)
+{show the stats list}
+
+	If(Who == None)
+		Who = Game.GetCurrentCrosshairRef() as Actor
+	EndIf
+
+	If(Who == None)
+		Who = self.Player
+	EndIf
+
+	;;;;;;;;
+
+	self.MenuActorStats_Construct(Who)	
+	;;self.MenuActorStats_Handle(Who)
+	Return
+EndFunction
+
+Function MenuActorStats_Construct(Actor Who)
+{construct the stats menu}
+
+	UIListMenu Menu = UIExtensions.GetMenu("UIListMenu",TRUE) as UIListMenu
+	Form[] List = self.ActorSemenListInventory(self.Player)
+
+	;;Int GemItem = Menu.AddEntryItem("Gems",-1,-1,TRUE)
+	;;Int MilkItem = Menu.AddEntryItem("Milk",-1,-1,TRUE)
+	;;Int SemenItem = Menu.AddEntryItem("Semen",-1,-1,TRUE)
+
+	Int GemItem = -1
+	Int MilkItem = -1;
+	Int SemenItem = -1;
+
+	Menu.AddEntryItem("Gems Incubated",GemItem)
+	Menu.AddEntryItem(self.StatGetFloat(Who,"GemGrowth"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Birthed",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Gems"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Conceived",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Preg"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Inserted",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Inserts"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Inseminated",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Inseminations"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Transferred Out",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"TransfersOut"),GemItem)
+	Menu.AddEntryItem(" ",GemItem)
+	Menu.AddEntryItem("Gems Transferred In",GemItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"TransfersIn"),GemItem)
+	Menu.AddEntryItem(" ",-1)
+	Menu.AddEntryItem("Milk Produced",MilkItem)
+	Menu.AddEntryItem((self.StatGetFloat(Who,"MilkProduce")*0.25 + " L"),MilkItem)
+	Menu.AddEntryItem(" ",MilkItem)
+	Menu.AddEntryItem("Milk Milked",MilkItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Milks") + " (" + (self.StatGetInt(Who,"Milks")*0.25) + " L)",MilkItem)
+	Menu.AddEntryItem(" ",-1)
+	Menu.AddEntryItem("Semen Produced",SemenItem)
+	Menu.AddEntryItem((self.StatGetFloat(Who,"SemenProduce")*0.004) + " L",SemenItem)
+	Menu.AddEntryItem(" ",-1)
+	Menu.AddEntryItem("Semen Bottled",SemenItem)
+	Menu.AddEntryItem(self.StatGetInt(Who,"Semen") + " (" + (self.StatGetInt(Who,"Semen")*0.004) + "L)",SemenItem)
+
+	UIExtensions.OpenMenu("UIListMenu",Who)
 	Return
 EndFunction

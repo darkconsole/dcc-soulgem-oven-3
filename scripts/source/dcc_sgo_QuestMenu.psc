@@ -38,12 +38,13 @@ EndEvent
 Event OnConfigInit()
 {things to do when the menu initalises (is opening)}
 
-	self.Pages = new String[7]
+	self.Pages = new String[8]
 	
-	self.Pages[0] = "Splash"
-
-	self.Pages[1] = "General"
+	self.Pages[0] = "General"
 	;; info, enable/disable, uninstall.
+
+	self.Pages[1] = "Statistics"
+	;; fertility, filled, capacities, days
 
 	self.Pages[2] = "Pregnancy"
 	;; fertility, filled, capacities, days
@@ -59,6 +60,9 @@ Event OnConfigInit()
 
 	self.Pages[6] = "Debug & Repair"
 	;; debug msgs, reset.
+
+	self.Pages[7] = "Splash"
+	;; splash screen
 
 	Return
 EndEvent
@@ -95,6 +99,8 @@ Event OnPageReset(string page)
 		self.ShowPageAnimations()
 	ElseIf(Page == "Debug & Repair")
 		self.ShowPageDebug()
+	ElSeIf(Page == "Statistics")
+		self.ShowPageStats()
 	Else
 		self.ShowPageIntro()
 	EndIf
@@ -301,6 +307,16 @@ Event OnOptionSliderOpen(Int Item)
 		Min = 0.5
 		Max = 2.0
 		Interval = 0.05
+	ElseIf(Item == ItemScaleBellyHigh)
+		Val = SGO.OptScaleBellyHigh
+		Min = -0.5
+		Max = 0.0
+		Interval = 0.01
+	ElseIf(Item == ItemScaleBreastHigh)
+		Val = SGO.OptScaleBreastHigh
+		Min = -0.5
+		Max = 0.0
+		Interval = 0.01
 
 	;; ShowPageImmersion()
 	ElseIf(Item == ItemProgressAlchFactor)
@@ -438,6 +454,12 @@ Event OnOptionSliderAccept(Int Item, Float Val)
 	ElseIf(Item == ItemScaleTesticleCurve)
 		SGO.OptScaleTesticleCurve = Val
 		Fmt = "{2}"
+	ElseIf(Item == ItemScaleBellyHigh)
+		SGO.OptScaleBellyHigh = Val
+		Fmt = "{2}"
+	ElseIf(Item == ItemScaleBreastHigh)
+		SGO.OptScaleBreastHigh = Val
+		Fmt = "{2}"
 
 	;; ShowPageImmersion()
 	ElseIf(Item == ItemProgressAlchFactor)
@@ -538,6 +560,10 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("How big to make the testicles at max semen.")
 	ElseIf(Item == ItemScaleTesticleCurve)
 		self.SetInfoText("[Advanced] Value that modifies the math to simulate volume at higher scales.")
+	ElseIf(Item == ItemScaleBellyHigh)
+		self.SetInfotext("Dampens the scaling at higher body weights. Use this is your Bodyslide presets have bigger bellies at the high end of the weight slider to prevent them from becoming unwieldy while scaled. Will take effect next body update.")
+	ElseIf(Item == ItemScaleBreastHigh)
+		self.SetInfotext("Dampens the scaling at higher body weights. Use this is your Bodyslide presets have bigger breasts at the high end of the weight slider to prevent them from becoming unwieldy while scaled. Will take effect next body update.")
 
 	;; ShowPageImmersion()
 	ElseIf(Item == ItemImmersivePlayer)
@@ -588,6 +614,32 @@ Event OnOptionHighlight(Int Item)
 		self.SetInfoText("Time between updating each actor.")
 	ElseIf(Item == ItemRestart)
 		self.SetInfoText("Restart Soulgem Oven. Your settings and characters will remain as they were.")
+
+	;; ShowPageStats()
+	ElseIf(Item == StatPregnantCount)
+		self.SetInfoText("How many people are currently pregnant with soulgems.")
+	ElseIf(Item == StatGemIncubated)
+		self.SetInfoText("How many gem levels have been incubated across all the people and all their gems.")
+	ElseIf(Item == StatGemBirthed)
+		self.SetInfoText("How many gems have been physically birthed.")
+	ElseIf(Item == StatGemConceived)
+		self.SetInfoText("How many pregnancies have occured naturally via sexual intercourse.")
+	ElseIf(Item == StatGemInserted)
+		self.SetInfoText("How many pregnancies have occured by forcefully inserting a gem.")
+	ElseIf(Item == StatGemInseminated)
+		self.SetInfoText("How many pregnancies have occured by artificial inseminations.")
+	ElseIf(Item == StatGemTransferred)
+		self.SetInfoText("How many gems have been physically transferred from one person to another.")
+	ElseIf(Item == StatMilkingCount)
+		self.SetInfoText("How many people are currently generating milk.")
+	ElseIf(Item == StatMilkProduced)
+		self.SetInfoText("How much milk has been produced across all the people.")
+	ElseIf(Item == StatMilkMilked)
+		self.SetInfoText("How many bottles of milk have been physically extracted.")
+	ElseIf(Item == StatSemenExtracted)
+		self.SetInfoText("How many bottles of semen have been physically extracted.")
+	ElseIf(Item == StatSemenProduced)
+		self.SetInfoText("How much semen has been produced across all the people.")
 
 	;; bbq.
 	Else
@@ -690,8 +742,10 @@ EndFunction
 
 Int ItemScaleBellyCurve
 Int ItemScaleBellyMax
+Int ItemScaleBellyHigh
 Int ItemScaleBreastCurve
 Int ItemScaleBreastMax
+Int ItemScaleBreastHigh
 Int ItemScaleTesticleCurve
 Int ItemScaleTesticleMax
 
@@ -704,11 +758,15 @@ Function ShowPageScales()
 		self.AddHeaderOption("")
 	ItemScaleBellyMax = self.AddSliderOption("Belly Max",SGO.OptScaleBellyMax,"{2}")
 		ItemScaleBellyCurve = self.AddSliderOption("Belly Curve",SGO.OptScaleBellyCurve,"{2}")
+	ItemScaleBellyHigh = self.AddSliderOption("Belly Bodyweight Dampen",SGO.OptScaleBellyHigh,"{2}")
+		self.AddEmptyOption()
 
 	self.AddHeaderOption("Breasts")
 		self.AddHeaderOption("")
 	ItemScaleBreastMax = self.AddSliderOption("Breast Max",SGO.OptScaleBreastMax,"{2}")
 		ItemScaleBreastCurve = self.AddSliderOption("Breast Curve",SGO.OptScaleBreastCurve,"{2}")
+	ItemScaleBreastHigh = self.AddSliderOption("Breast Bodyweight Dampen",SGO.OptScaleBreastHigh,"{2}")
+		self.AddEmptyOption()
 
 	self.AddHeaderOption("Testicles")
 		self.AddHeaderOption("")
@@ -794,6 +852,50 @@ Function ShowPageAnimations()
 	self.SetCursorPosition(0)
 
 	ItemAnimationBirthing = self.AddSliderOption("Birthing Animation",SGO.OptAnimationBirthing,"{0}")
+
+	Return
+EndFunction
+
+;/*****************************************************************************
+*****************************************************************************/;
+
+Int StatPregnantCount
+Int StatGemIncubated
+Int StatGemBirthed
+Int StatGemConceived
+Int StatGemInserted
+Int StatGemInseminated
+Int StatGemTransferred
+Int StatMilkingCount
+Int StatMilkProduced
+Int StatMilkMilked
+Int StatSemenExtracted
+Int StatSemenProduced
+
+Function ShowPageStats()
+	self.SetTitleText("Global Statistics")
+	self.SetCursorFillMode(TOP_TO_BOTTOM)
+
+	self.SetCursorPosition(0)
+	self.AddHeaderOption("Gem Stats")
+	StatPregnantCount = self.AddTextOption("Pregnant Count",StorageUtil.FormListCount(None,"SGO.ActorList.Gem"),OPTION_FLAG_DISABLED)
+	StatGemIncubated = self.AddTextOption("Gems Incubated",SGO.StatGetFloat(None,"GemGrowth"),OPTION_FLAG_DISABLED)
+	StatGemBirthed = self.AddTextOption("Gems Birthed",SGO.StatGetInt(None,"Gems"),OPTION_FLAG_DISABLED)
+	StatGemConceived = self.AddTextOption("Gems Conceived",SGO.StatGetInt(None,"Preg"),OPTION_FLAG_DISABLED)
+	StatGemInserted = self.AddTextOption("Gems Inserted",SGO.StatGetInt(None,"Inserts"),OPTION_FLAG_DISABLED)
+	StatGemInseminated = self.AddTextOption("Gems Inseminated",SGO.StatGetInt(None,"Inseminations"),OPTION_FLAG_DISABLED)
+	StatGemTransferred = self.AddTextOption("Gems Transferred",SGO.StatGetInt(None,"Transfers"),OPTION_FLAG_DISABLED)
+
+	self.SetCursorPosition(1)
+	self.AddHeaderOption("Milk Stats")
+	StatMilkingCount = self.AddTextOption("Lactating Count",StorageUtil.FormListCount(None,"SGO.ActorList.Milk"),OPTION_FLAG_DISABLED)
+	StatMilkProduced = self.AddTextOption("Milk Produced",SGO.StatGetInt(None,"MilkProduce") + " (" + (SGO.StatGetInt(None,"MilkProduce")*0.25) + " L)",OPTION_FLAG_DISABLED)
+	StatMilkMilked = self.AddTextOption("Milks Milked",SGO.StatGetInt(None,"Milks") + " (" + (SGO.StatGetInt(None,"Milks")*0.25) + " L)",OPTION_FLAG_DISABLED)
+	self.AddEmptyOption()
+
+	self.AddHeaderOption("Semen Stats")
+	StatSemenProduced = self.AddTextOption("Semen Produced",SGO.StatGetInt(None,"SemenProduce") + " (" + (SGO.StatGetInt(None,"SemenProduce")*0.004) + " L)",OPTION_FLAG_DISABLED)
+	StatSemenExtracted = self.AddTextOption("Semen Extracted",SGO.StatGetInt(None,"Semen") + " (" + (SGO.StatGetInt(None,"Semen")*0.004) + " L)",OPTION_FLAG_DISABLED)
 
 	Return
 EndFunction

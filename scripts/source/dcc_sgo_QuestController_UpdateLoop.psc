@@ -26,7 +26,7 @@ Event OnUpdate()
 	EndIf
 
 
-	SGO.PrintLog("UpdateLoop:Begin")
+	;;SGO.PrintLog("UpdateLoop:Begin")
 
 	;; maintenance.
 	;;debug.messagebox("clean lost")
@@ -44,7 +44,7 @@ Event OnUpdate()
 	;;debug.messagebox("update semen")
 	self.OnUpdate_SemenData()
 
-	SGO.PrintLog("UpdateLoop:Done")
+	;;SGO.PrintLog("UpdateLoop:Done")
 
 	self.RegisterForSingleUpdate(SGO.OptUpdateInterval)
 EndEvent
