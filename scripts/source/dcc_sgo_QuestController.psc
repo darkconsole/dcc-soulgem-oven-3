@@ -1238,16 +1238,16 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 
 		;; determine what pitchers we have for determining which preg
 		;; chance to use.
-		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast) > 0)
+		If(Math.LogicalAnd(ActorBio[x],self.BioIsBeast) > 0 && (Animation.getGender(x) % 2) == 0)
 			BeastCount += 1
-		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioInseminate) > 0)
+		ElseIf(Math.LogicalAnd(ActorBio[x],self.BioInseminate) > 0 && (Animation.getGender(x) % 2) == 0)
 			MaleCount += 1
 		EndIf
 
 		x += 1
 	EndWhile
 
-	If(Math.LogicalAnd(PartyBio,(self.BioInseminate + self.BioProduceGems)) != (self.BioInseminate + self.BioProduceGems))
+	If(Math.LogicalAnd(PartyBio,(self.BioInseminate + self.BioProduceGems)) != (self.BioInseminate + self.BioProduceGems) || (BeastCount == 0 && MaleCount == 0))
 		;; if we didn't have a winning combination of fuel and ovens
 		;; available there is no point in proceeeding.
 		self.PrintDebug("Encounter did not have a viable combo (" + PartyBio + " (" + (self.BioInseminate + self.BioProduceGems) + ")).")
@@ -1273,7 +1273,7 @@ Event OnEncounterEnding(String EventName, String Args, Float Argc, Form From)
 
 		;; decide what to do if the actor is able to produce gems.
 
-		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) == self.BioProduceGems)
+		If(Math.LogicalAnd(ActorBio[x],self.BioProduceGems) == self.BioProduceGems && (Animation.getGender(x) % 2) == 1)
 			If(Preg)				
 				self.ActorGemAdd(ActorList[x])
 				self.StatBump(None,"Preg")
