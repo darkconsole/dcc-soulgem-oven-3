@@ -1699,27 +1699,33 @@ integer that defines the capaiblities of this actor.}
 	If(Sex == 0)
 		Value = Math.LogicalOr(Value, self.BioInseminate)
 	Else
-	        ;; Cetuximab - Futa check
-	        SOS_API sos = SOS_API.Get()
-	        if(sos != None)
-	            SOS_AddonQuest_Script sos_addon = sos.GetSchlong(Who) As SOS_AddonQuest_Script
-	            If(sos_addon != None)
-	                If(sos_addon.GetName() == "UNP")
-	                    Self.PrintDebug("SOS UNP Plugin schlong found on " + Who.GetDisplayName() + ". Marking as Futa (Inseminator).")
-	                    ;; Futas must only inseminate, otherwise they can get themselves pregnant :/
-	                    Value = Math.LogicalOr(Value, self.BioInseminate)
-	                Else
-	                    Self.PrintDebug("Futa incompatible SOS Plugin found on " + Who.GetDisplayName() + ": " + sos_addon.GetName() + ". Marking as female.")
-	                    Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
-	              EndIf
-	            Else
-	                Self.PrintDebug("No SOS Addon was placed on " + Who.GetDisplayName() + ". Assuming normal female.")
-	                Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
-	            EndIf
-	        Else
-	            Self.PrintDebug("SOS API not found, are you using SOS ver 3.00.004 or later?")
-	            Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
-	       EndIf
+
+		If(Game.GetModByName("Schlongs of Skyrim - Core.esm") != 255)
+
+			;; Cetuximab - Futa check
+			SOS_API sos = SOS_API.Get()
+			if(sos != None)
+				SOS_AddonQuest_Script sos_addon = sos.GetSchlong(Who) As SOS_AddonQuest_Script
+				If(sos_addon != None)
+					If(sos_addon.GetName() == "UNP")
+						Self.PrintDebug("SOS UNP Plugin schlong found on " + Who.GetDisplayName() + ". Marking as Futa (Inseminator).")
+						;; Futas must only inseminate, otherwise they can get themselves pregnant :/
+						Value = Math.LogicalOr(Value, self.BioInseminate)
+					Else
+						Self.PrintDebug("Futa incompatible SOS Plugin found on " + Who.GetDisplayName() + ": " + sos_addon.GetName() + ". Marking as female.")
+						Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
+					EndIf
+				Else
+					Self.PrintDebug("No SOS Addon was placed on " + Who.GetDisplayName() + ". Assuming normal female.")
+					Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
+				EndIf
+			Else
+				Self.PrintDebug("SOS API not found, are you using SOS ver 3.00.004 or later?")
+				Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
+			EndIf
+
+		EndIf
+
 	EndIf
 
 	;; figure out what the user wanted. negatives override positives.
