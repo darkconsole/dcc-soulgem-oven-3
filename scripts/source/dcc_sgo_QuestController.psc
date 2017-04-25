@@ -1703,16 +1703,18 @@ integer that defines the capaiblities of this actor.}
 		If(Game.GetModByName("Schlongs of Skyrim - Core.esm") != 255)
 
 			;; Cetuximab - Futa check
+			;; --TTT: some minor edits,
 			SOS_API sos = SOS_API.Get()
 			if(sos != None)
 				SOS_AddonQuest_Script sos_addon = sos.GetSchlong(Who) As SOS_AddonQuest_Script
 				If(sos_addon != None)
-					If(sos_addon.GetName() == "UNP")
-						Self.PrintDebug("SOS UNP Plugin schlong found on " + Who.GetDisplayName() + ". Marking as Futa (Inseminator).")
-						;; Futas must only inseminate, otherwise they can get themselves pregnant :/
-						Value = Math.LogicalOr(Value, self.BioInseminate)
+					String addonName = sos_addon.GetName()
+					If((addonName != "No Schlong for Females") && (addonName != "Pubic Hair Wild") && (addonName != "Pubic Hair Landing Strip") && (addonName != "Pubic Hair Bush") && (addonName != "Pubic Hair Untamed"))
+						Self.PrintDebug("SOS "+addonName+" Plugin schlong found on " + Who.GetDisplayName() + ". Marking as Futa (Inseminator + Incubator).")
+						;; Futas can both inseminate and incubate without self-impregnation, thanks to the position-check.
+						Value = Math.LogicalOr(Value, (self.BioInseminate + self.BioProduceGems + self.BioProduceMilk))
 					Else
-						Self.PrintDebug("Futa incompatible SOS Plugin found on " + Who.GetDisplayName() + ": " + sos_addon.GetName() + ". Marking as female.")
+						Self.PrintDebug("Futa incompatible SOS Plugin found on " + Who.GetDisplayName() + ": " + addonName + ". Marking as female.")
 						Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
 					EndIf
 				Else
@@ -1723,7 +1725,9 @@ integer that defines the capaiblities of this actor.}
 				Self.PrintDebug("SOS API not found, are you using SOS ver 3.00.004 or later?")
 				Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
 			EndIf
-
+		Else
+			Self.PrintDebug("SOS not installed. Assuming normal female.")
+			Value = Math.LogicalOr(Value, (self.BioProduceGems + self.BioProduceMilk))
 		EndIf
 
 	EndIf
